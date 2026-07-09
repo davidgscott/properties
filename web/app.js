@@ -5,7 +5,7 @@ const STATUS_COLOR = { PASS: "#1a7f37", REVIEW: "#c69214", FAIL: "#b42318" };
 const FEMA_NFHL = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer";
 
 let map, parcelLayer, femaLayer, radiusCircle, centerMarker;
-let lastResults = [], selectedApn = null;
+let lastResults = [], selectedApn = null, statusFilter = null;
 let cfg = { defaults: {}, guerneville_center: [-122.9958, 38.5021], max_radius_miles: 20 };
 const MILES_TO_M = 1609.344;
 
@@ -150,22 +150,26 @@ function styleFor(f) {
 }
 
 function renderResults(data) {
-  // Map polygons.
-  parcelLayer.clearLayers();
-  const fc = { type: "FeatureCollection", features: lastResults.map(r => ({
-    type: "Feature", properties: r, geometry: r.geometry,
-  })) };
-  parcelLayer.addData(fc);
+  statusFilter = null;                 // reset the filter on each new screen
+  drawParcels();
   if (lastResults.length) { try { map.fitBounds(parcelLayer.getBounds().pad(0.1)); } catch (e) {} }
 
-  // Summary pills.
+  // Summary — clickable status filters.
   const by = { PASS: 0, REVIEW: 0, FAIL: 0 };
   lastResults.forEach(r => by[r.status]++);
   document.getElementById("summary").innerHTML =
-    `<strong>${data.count}</strong> parcels` +
-    `<span class="pill pass">PASS ${by.PASS}</span>` +
-    `<span class="pill review">REVIEW ${by.REVIEW}</span>` +
-    `<span class="pill fail">FAIL ${by.FAIL}</span>`;
+    `<span class="filter-label">Filter:</span>` +
+    `<span class="pill all" data-status="" title="Show all">All ${data.count}</span>` +
+    `<span class="pill pass" data-status="PASS" title="Show only PASS">PASS ${by.PASS}</span>` +
+    `<span class="pill review" data-status="REVIEW" title="Show only REVIEW">REVIEW ${by.REVIEW}</span>` +
+    `<span class="pill fail" data-status="FAIL" title="Show only FAIL">FAIL ${by.FAIL}</span>`;
+  document.querySelectorAll("#summary .pill").forEach(p => {
+    p.addEventListener("click", () => {
+      const s = p.dataset.status || null;
+      statusFilter = (statusFilter === s) ? null : s;   // click active pill = clear
+      applyFilter();
+    });
+  });
 
   // Table.
   const cols = ["Status", "Score", "APN", "Address", "Juris.", "Zoning", "Permit",
@@ -177,6 +181,7 @@ function renderResults(data) {
   lastResults.forEach(r => {
     const tr = document.createElement("tr");
     tr.dataset.apn = r.apn;
+    tr.dataset.status = r.status;
     const s = r.status.toLowerCase();
     const permit = permitLabel(r);
     const price = r.list_price ? r.list_price : (r.listed ? "listed" : "");
@@ -200,8 +205,34 @@ function renderResults(data) {
     tb.appendChild(tr);
   });
 
+  applyFilter();                       // sets initial "All" active state
   document.getElementById("export-xlsx").disabled = !lastResults.length;
   document.getElementById("export-csv").disabled = !lastResults.length;
+}
+
+// Results matching the current status filter (or all).
+function visibleResults() {
+  return statusFilter ? lastResults.filter(r => r.status === statusFilter) : lastResults;
+}
+
+// (Re)draw the parcels currently passing the filter onto the map.
+function drawParcels() {
+  parcelLayer.clearLayers();
+  parcelLayer.addData({ type: "FeatureCollection", features: visibleResults().map(r => ({
+    type: "Feature", properties: r, geometry: r.geometry,
+  })) });
+}
+
+// Apply the active status filter to the pills, the table rows, and the map.
+function applyFilter() {
+  const summary = document.getElementById("summary");
+  summary.classList.toggle("filtered", !!statusFilter);
+  summary.querySelectorAll(".pill").forEach(p =>
+    p.classList.toggle("active", (p.dataset.status || null) === statusFilter));
+  document.querySelectorAll("#results-table tbody tr").forEach(tr => {
+    tr.style.display = (!statusFilter || tr.dataset.status === statusFilter) ? "" : "none";
+  });
+  drawParcels();
 }
 
 function permitLabel(r) {
@@ -269,7 +300,7 @@ function renderListings(items) {
 async function doExport(fmt) {
   const res = await fetch("/api/export", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ results: lastResults, format: fmt }),
+    body: JSON.stringify({ results: visibleResults(), format: fmt }),
   });
   const blob = await res.blob();
   const a = document.createElement("a");

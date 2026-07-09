@@ -56,10 +56,17 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   display: grid; grid-template-rows: auto 1fr; min-height: 0; }
 #summary { padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px;
   display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-.pill { padding: 2px 9px; border-radius: 20px; font-weight: 600; font-size: 12px; }
+.pill { padding: 2px 9px; border-radius: 20px; font-weight: 600; font-size: 12px;
+  cursor: pointer; user-select: none; border: 1px solid transparent;
+  transition: opacity .12s, box-shadow .12s; }
+.pill:hover { box-shadow: 0 1px 4px rgba(0,0,0,.15); }
 .pill.pass { background: var(--pass-bg); color: var(--pass); }
 .pill.review { background: var(--review-bg); color: var(--review); }
 .pill.fail { background: var(--fail-bg); color: var(--fail); }
+.pill.all { background: #eef1f4; color: var(--ink); }
+.pill.active { box-shadow: 0 0 0 2px currentColor inset; }
+#summary.filtered .pill:not(.active) { opacity: .45; }
+.filter-label { font-size: 12px; color: var(--muted); }
 #table-wrap { overflow: auto; min-height: 0; }
 table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
 thead th { position: sticky; top: 0; background: #f0f2f5; text-align: left;
