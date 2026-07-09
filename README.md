@@ -33,6 +33,13 @@ the above.
 
 ## Quick start
 
+**Easiest (no terminal):** double-click **`start.command`** (Mac) or
+**`start.bat`** (Windows). The first run installs everything into a local virtual
+environment and opens the tool in your browser; later runs start in seconds. See
+the [Quick Start guide](docs/QUICKSTART.md) for the one-time Python install and
+first-run security prompt.
+
+**Terminal:**
 ```bash
 pip install -r requirements.txt
 python run.py                 # opens http://127.0.0.1:8000

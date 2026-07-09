@@ -62,50 +62,48 @@ git clone https://github.com/davidgscott/properties.git
 
 ---
 
-## Step 3 — Open the folder in your terminal
+## Step 3 — Start it (the easy way: double-click)
 
-In the terminal, type `cd ` (with a space) and then drag the `properties` folder
-onto the terminal window and press Enter. It will look like:
+Open the `properties` folder and double-click the launcher for your computer:
+
+- **Mac:** double-click **`start.command`**
+- **Windows:** double-click **`start.bat`**
+
+A small black window opens. **The first time**, it sets itself up and installs
+what it needs — this takes a few minutes, so let it finish. When it's ready, your
+web browser opens automatically to the tool. Every time after that, it starts in
+a few seconds.
+
+That's the tool. 🎉 Leave the little black window open while you use it.
+
+> **"Are you sure you want to open it?" / "Windows protected your PC"** — because
+> the file came from the internet, your computer asks once before running it.
+> - **Mac:** if double-click is blocked, **right-click `start.command` ▸ Open**,
+>   then click **Open** in the dialog. You only do this the first time.
+> - **Windows:** click **More info ▸ Run anyway.** Also once.
+
+If double-click doesn't work at all, use the terminal method just below.
+
+<details>
+<summary><strong>Prefer the terminal? (or the launcher didn't work)</strong></summary>
+
+Open a terminal, go to the folder, install once, and run:
 
 ```bash
-cd /Users/you/Downloads/properties
-```
-
-Tip: run `ls` (Mac) or `dir` (Windows) — you should see files like `run.py` and
-`requirements.txt`. That confirms you're in the right place.
-
----
-
-## Step 4 — Install the tool's building blocks (one time)
-
-```bash
+cd /path/to/properties          # (drag the folder onto the terminal to fill this in)
 python3 -m pip install -r requirements.txt
-```
-(Windows: use `python` instead of `python3`.)
-
-This downloads the free libraries the tool uses. It takes a minute or two and
-only needs to be done once. A "successfully installed…" message means you're set.
-
----
-
-## Step 5 — Run it
-
-```bash
 python3 run.py
 ```
-(Windows: `python run.py`.)
+(On Windows use `python` instead of `python3`.) Your browser opens to
+**<http://127.0.0.1:8000>**. Press `Ctrl+C` in the terminal to stop it.
 
-You'll see a message like *"Storage Screener running at http://127.0.0.1:8000"*
-and your web browser should open automatically. If it doesn't, open your browser
-and go to:
+</details>
 
-**<http://127.0.0.1:8000>**
-
-That's the tool. 🎉
+If the browser doesn't open on its own, go to **<http://127.0.0.1:8000>**.
 
 ---
 
-## Step 6 — Your first screen
+## Step 4 — Your first screen
 
 1. In the left panel, leave the **Radius** at **15 miles** (the dashed circle on
    the map is your search area, centered on Guerneville).
@@ -125,10 +123,11 @@ The [Tutorial](TUTORIAL.md) explains what every column and color means.
 
 ## Stopping and restarting
 
-- **To stop the tool:** click the terminal window and press **`Ctrl + C`**.
-- **To start it again later:** open a terminal, `cd` into the `properties`
-  folder (Step 3), and run `python3 run.py` (Step 5). You only do Steps 1, 2,
-  and 4 once.
+- **To stop the tool:** close the little black launcher window (or click it and
+  press **`Ctrl + C`**).
+- **To start it again later:** just double-click **`start.command`** (Mac) or
+  **`start.bat`** (Windows) again. After the first time it starts in seconds —
+  no setup, no browser prompts.
 
 ---
 
