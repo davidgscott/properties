@@ -64,6 +64,20 @@ function wire() {
   document.getElementById("export-xlsx").addEventListener("click", () => doExport("xlsx"));
   document.getElementById("export-csv").addEventListener("click", () => doExport("csv"));
 
+  // Info tooltips: show on hover (CSS); toggle on tap/click for touch devices,
+  // without activating the label's checkbox/slider.
+  const closeTips = () => document.querySelectorAll(".tip.open")
+    .forEach(t => t.classList.remove("open"));
+  document.querySelectorAll(".tip").forEach(t => {
+    t.addEventListener("click", e => {
+      e.preventDefault(); e.stopPropagation();
+      const open = t.classList.contains("open");
+      closeTips();
+      if (!open) t.classList.add("open");
+    });
+  });
+  document.addEventListener("click", closeTips);
+
   // Help modal open/close.
   const modal = document.getElementById("help-modal");
   const showHelp = () => { modal.hidden = false; };
@@ -71,7 +85,7 @@ function wire() {
   document.getElementById("help-btn").addEventListener("click", showHelp);
   document.getElementById("help-close").addEventListener("click", hideHelp);
   modal.addEventListener("click", e => { if (e.target === modal) hideHelp(); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") hideHelp(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { hideHelp(); closeTips(); } });
 }
 
 // ---- area -------------------------------------------------------------------

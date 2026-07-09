@@ -16,7 +16,9 @@
 
       <section class="card">
         <h2>1 · Area — radius from Guerneville</h2>
-        <label>Radius <span id="radius-val" class="val"></span>
+        <label>Radius <span class="tip" tabindex="0" role="button" aria-label="Help"
+            data-tip="How far out from downtown Guerneville to search. The dashed circle on the map shows the area.">i</span>
+          <span id="radius-val" class="val"></span>
           <input type="range" id="radius-slider" min="1" max="20" step="1" />
         </label>
         <label>Exact miles
@@ -27,27 +29,39 @@
 
       <section class="card">
         <h2>2 · Criteria</h2>
-        <label>Min parcel size (acres) <span id="acres-val" class="val"></span>
+        <label>Min parcel size (acres) <span class="tip" tabindex="0" role="button" aria-label="Help"
+            data-tip="Ignore parcels smaller than this. A self-storage facility usually needs a few usable acres.">i</span>
+          <span id="acres-val" class="val"></span>
           <input type="range" id="min-acres" min="0" max="10" step="0.5" />
         </label>
-        <label>Max mean slope (%) <span id="slope-val" class="val"></span>
+        <label>Max mean slope (%) <span class="tip" tabindex="0" role="button" aria-label="Help"
+            data-tip="Average steepness of the land. Parcels steeper than this fail — storage needs flat, buildable ground. Under about 8% reads as flat.">i</span>
+          <span id="slope-val" class="val"></span>
           <input type="range" id="max-slope" min="2" max="20" step="1" />
         </label>
         <label class="check">
           <input type="checkbox" id="only-vacant" checked />
           Vacant land only (else include any listed parcel)
+          <span class="tip" tabindex="0" role="button" aria-label="Help"
+            data-tip="Only show unbuilt land (per county assessor records). Untick to also include any parcel you've tagged with a listing below.">i</span>
         </label>
         <label class="check">
           <input type="checkbox" id="commercial-only" />
           Commercial / industrial vacant land only (assessor class)
+          <span class="tip" tabindex="0" role="button" aria-label="Help"
+            data-tip="'Assessor class' is how the county categorizes a parcel's use. This shows only land the county classes as commercial or industrial — the types most likely to allow storage — and makes the search much faster.">i</span>
         </label>
         <label class="check">
           <input type="checkbox" id="uninc-only" checked />
           Unincorporated county only (skip cities)
+          <span class="tip" tabindex="0" role="button" aria-label="Help"
+            data-tip="Skip parcels inside city limits (Santa Rosa, Windsor, etc.), where the tool doesn't have zoning data yet. Guerneville itself is unincorporated county.">i</span>
         </label>
         <label class="check">
           <input type="checkbox" id="strict-flood" checked />
           Fail on ANY FEMA flood-zone overlap (strict)
+          <span class="tip" tabindex="0" role="button" aria-label="Help"
+            data-tip="If on, a parcel fails when any part touches a FEMA flood zone. If off, flood is noted but doesn't auto-fail. Recommended on for flood-prone Guerneville.">i</span>
         </label>
         <button id="screen-btn" class="primary">Screen parcels</button>
         <div id="status-line" class="small"></div>
@@ -56,7 +70,8 @@
       <section class="card">
         <h2>3 · Manual listings <span class="hint">(for-sale)</span></h2>
         <p class="small muted">Paste a LoopNet / Crexi / LandWatch listing to tag a
-          parcel by APN.</p>
+          parcel by APN <span class="tip" tabindex="0" role="button" aria-label="Help"
+            data-tip="APN = Assessor's Parcel Number, the county's unique ID for a property (e.g. 001-011-004). Find it on the listing or the county parcel record.">i</span>.</p>
         <input id="l-apn" placeholder="APN (e.g. 001-011-004)" />
         <input id="l-url" placeholder="Listing URL" />
         <input id="l-price" placeholder="List price (optional)" />

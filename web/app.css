@@ -19,7 +19,8 @@ html, body { margin: 0; height: 100%; font: 14px/1.45 -apple-system, BlinkMacSys
 .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .4px;
   color: var(--muted); margin: 0 0 10px; }
 .card .hint { text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 400; }
-label { display: block; font-size: 12.5px; color: var(--ink); margin: 10px 0 4px; }
+label { display: block; font-size: 12.5px; color: var(--ink); margin: 10px 0 4px;
+  position: relative; }
 label.check { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
 label.check input { margin-top: 2px; }
 select, input[type=text], input:not([type]) { width: 100%; padding: 7px 9px;
@@ -79,6 +80,24 @@ td a:hover { text-decoration: underline; }
   line-height: 1.7; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
 .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px;
   margin-right: 6px; vertical-align: -1px; }
+
+/* Info tooltips (ⓘ next to a control) */
+.tip { display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--line);
+  color: var(--muted); font-size: 10px; font-weight: 700; font-style: normal;
+  line-height: 1; cursor: help; vertical-align: middle; margin-left: 3px;
+  user-select: none; -webkit-user-select: none; flex: none; }
+.tip:hover, .tip:focus, .tip.open { color: var(--accent); border-color: var(--accent);
+  outline: none; }
+.tip::after {
+  content: attr(data-tip);
+  position: absolute; left: 0; top: calc(100% + 4px); z-index: 60;
+  width: 215px; white-space: normal; text-align: left;
+  background: #1c2530; color: #fff; font-size: 11.5px; font-weight: 400;
+  font-style: normal; line-height: 1.45; text-transform: none; letter-spacing: normal;
+  padding: 7px 9px; border-radius: 7px; box-shadow: 0 4px 14px rgba(0,0,0,.22);
+  opacity: 0; visibility: hidden; transition: opacity .12s; pointer-events: none; }
+.tip:hover::after, .tip:focus::after, .tip.open::after { opacity: 1; visibility: visible; }
 
 /* Help button + modal */
 button.help-open { margin: 0 0 14px; font-size: 13px; }
