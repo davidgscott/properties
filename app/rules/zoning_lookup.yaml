@@ -1,0 +1,68 @@
+# Self-storage / mini-storage zoning lookup
+# =========================================================================
+# Maps (jurisdiction -> zone code) to whether a self-storage / mini-storage
+# facility is allowed and under what permit path.
+#
+#   permitted:    true | false | null   (null = unknown / not yet mapped)
+#   permit_type:  by-right | conditional | not-allowed | unknown
+#   confidence:   high | medium | low    (how sure the mapping is)
+#   article:      Sonoma County Code Ch.26 article for verification
+#   note:         reasoning / what to confirm
+#
+# IMPORTANT — this is a SCREENING AID, NOT legal advice. Mini/self-storage maps
+# to different codes and permit paths in every jurisdiction, and Municode/eLaws
+# blocked automated fetch during build, so the county entries below encode the
+# well-established Sonoma pattern at MEDIUM confidence and must be confirmed
+# against the live use tables (links per entry) or with Permit Sonoma planning
+# (707-565-1900) before relying on them. Cities are intentionally left unmapped
+# (review) until their use tables are added in Phase 2.
+# =========================================================================
+
+meta:
+  county_code_base: "https://sonomacounty-ca.elaws.us/code/coor_ch26"
+  municode_base: "https://library.municode.com/ca/sonoma_county/codes/code_of_ordinances"
+  disclaimer: >
+    Screening aid only. Confirm all permit determinations with Permit Sonoma or
+    the relevant city planning department before making an offer.
+
+jurisdictions:
+  # ---- UNINCORPORATED SONOMA COUNTY (Guerneville, Forestville, Monte Rio) ----
+  "Unincorporated (Sonoma County)":
+    source: "Sonoma County Zoning Regulations, Chapter 26"
+    zones:
+      C3:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-34", note: "C3 General/Heavy Commercial — mini-storage typically allowed with a Use Permit. Verify §26-34 use-permit list."}
+      MP:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-48", note: "Industrial Park — storage uses commonly allowed with Use Permit. Verify."}
+      M1:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-46", note: "Limited Urban Industrial — §26-46-020 lists uses permitted with a Use Permit; storage generally conditional here."}
+      M2:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-50", note: "Heavy Industrial — storage generally allowed; confirm by-right vs use-permit."}
+      M3:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-52", note: "Limited Rural Industrial — storage generally conditional. Verify."}
+      AS:   {permitted: null,  permit_type: unknown,     confidence: low,    article: "26-30", note: "Agricultural Services — some storage/service uses; confirm whether mini-storage qualifies."}
+      CR:   {permitted: null,  permit_type: unknown,     confidence: low,    article: "26-38", note: "Commercial Rural — verify; may allow with Use Permit."}
+      LC:   {permitted: false, permit_type: not-allowed, confidence: low,    article: "26-36", note: "Limited Commercial — narrow use list; mini-storage generally NOT a listed use. Verify before excluding."}
+      C1:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-30", note: "Neighborhood Commercial — retail/service focus; storage facilities not permitted."}
+      C2:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-32", note: "Retail Business & Service — storage facilities not a listed use."}
+      CO:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-33", note: "Administrative & Professional Office — no storage."}
+      K:    {permitted: false, permit_type: not-allowed, confidence: low,    article: "26-40", note: "Recreation/Visitor-Serving — not a storage zone."}
+      # Agricultural / resource / residential base zones — not storage zones.
+      AR:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-06", note: "Agriculture & Residential — no commercial storage."}
+      DA:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-08", note: "Diverse Agriculture."}
+      LEA:  {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-10", note: "Land Extensive Agriculture."}
+      LIA:  {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-12", note: "Land Intensive Agriculture."}
+      RRD:  {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-14", note: "Resources & Rural Development."}
+      RR:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-16", note: "Rural Residential."}
+      R1:   {permitted: false, permit_type: not-allowed, confidence: high,   article: "26-18", note: "Low Density Residential."}
+      R2:   {permitted: false, permit_type: not-allowed, confidence: high,   article: "26-20", note: "Medium Density Residential."}
+      R3:   {permitted: false, permit_type: not-allowed, confidence: high,   article: "26-22", note: "High Density Residential."}
+      TP:   {permitted: false, permit_type: not-allowed, confidence: high,   article: "26-15", note: "Timberland Production."}
+      PF:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-42", note: "Public Facilities."}
+
+  # ---- INCORPORATED CITIES (Phase 2 — add each city's use table here) --------
+  # Left unmapped on purpose: every parcel in these jurisdictions returns
+  # 'unknown' and is flagged REVIEW ("verify city zoning") rather than guessed.
+  "Santa Rosa": {source: "City of Santa Rosa Zoning Code (TODO)", zones: {}}
+  "Windsor":    {source: "Town of Windsor Zoning (TODO)", zones: {}}
+  "Healdsburg": {source: "City of Healdsburg Zoning (TODO)", zones: {}}
+  "Sebastopol": {source: "City of Sebastopol Zoning (TODO)", zones: {}}
+  "Cloverdale": {source: "City of Cloverdale Zoning (TODO)", zones: {}}
+  "Rohnert Park": {source: "City of Rohnert Park Zoning (TODO)", zones: {}}
+  "Cotati":     {source: "City of Cotati Zoning (TODO)", zones: {}}
+  "Sonoma":     {source: "City of Sonoma Zoning (TODO)", zones: {}}

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Storage Screener — Sonoma County</title>
+  <link rel="stylesheet" href="/vendor/leaflet.css" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="panel">
+      <h1>Storage&nbsp;Screener</h1>
+      <p class="sub">Self-storage parcel screening — Guerneville &amp; Sonoma County</p>
+
+      <section class="card">
+        <h2>1 · Area</h2>
+        <label>Community preset
+          <select id="community"></select>
+        </label>
+        <button id="use-view" class="ghost">Use current map view as area</button>
+        <div id="bbox-label" class="mono small"></div>
+      </section>
+
+      <section class="card">
+        <h2>2 · Criteria</h2>
+        <label>Min parcel size (acres) <span id="acres-val" class="val"></span>
+          <input type="range" id="min-acres" min="0" max="10" step="0.5" />
+        </label>
+        <label>Max mean slope (%) <span id="slope-val" class="val"></span>
+          <input type="range" id="max-slope" min="2" max="20" step="1" />
+        </label>
+        <label class="check">
+          <input type="checkbox" id="only-vacant" checked />
+          Vacant land only (else include any listed parcel)
+        </label>
+        <label class="check">
+          <input type="checkbox" id="strict-flood" checked />
+          Fail on ANY FEMA flood-zone overlap (strict)
+        </label>
+        <button id="screen-btn" class="primary">Screen parcels</button>
+        <div id="status-line" class="small"></div>
+      </section>
+
+      <section class="card">
+        <h2>3 · Manual listings <span class="hint">(for-sale)</span></h2>
+        <p class="small muted">Paste a LoopNet / Crexi / LandWatch listing to tag a
+          parcel by APN.</p>
+        <input id="l-apn" placeholder="APN (e.g. 001-011-004)" />
+        <input id="l-url" placeholder="Listing URL" />
+        <input id="l-price" placeholder="List price (optional)" />
+        <button id="add-listing" class="ghost">Add listing</button>
+        <ul id="listing-list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>4 · Export</h2>
+        <div class="row">
+          <button id="export-xlsx" class="ghost" disabled>Excel (.xlsx)</button>
+          <button id="export-csv" class="ghost" disabled>CSV</button>
+        </div>
+      </section>
+
+      <p class="disclaimer">Screening aid only — not legal advice. Confirm zoning
+        &amp; flood status with Permit Sonoma and FEMA before acting.</p>
+    </aside>
+
+    <main id="main">
+      <div id="map"></div>
+      <div id="results">
+        <div id="summary"></div>
+        <div id="table-wrap">
+          <table id="results-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/vendor/leaflet.js"></script>
+  <script src="/vendor/esri-leaflet.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

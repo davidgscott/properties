@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+config.toml
+app/cache/*.json
+app/data/listings.json
+*.xlsx
+*.csv
+.DS_Store

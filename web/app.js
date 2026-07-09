@@ -1,0 +1,264 @@
+/* Storage Screener frontend — Leaflet map + results table + manual listings. */
+"use strict";
+
+const STATUS_COLOR = { PASS: "#1a7f37", REVIEW: "#c69214", FAIL: "#b42318" };
+const FEMA_NFHL = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer";
+
+let map, parcelLayer, femaLayer, lastResults = [], selectedApn = null;
+let cfg = { defaults: {}, communities: {} };
+
+// ---- init -------------------------------------------------------------------
+async function init() {
+  map = L.map("map", { zoomControl: true }).setView([38.502, -122.996], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, attribution: "© OpenStreetMap",
+  }).addTo(map);
+
+  // FEMA flood overlay (toggleable).
+  femaLayer = L.esri.dynamicMapLayer({ url: FEMA_NFHL, opacity: 0.4 }).addTo(map);
+  parcelLayer = L.geoJSON(null, {
+    style: styleFor,
+    onEachFeature: (f, layer) => layer.on("click", () => selectRow(f.properties.apn)),
+  }).addTo(map);
+
+  L.control.layers(null, { "FEMA flood zones": femaLayer, "Screened parcels": parcelLayer },
+    { collapsed: false }).addTo(map);
+  addLegend();
+
+  map.on("moveend", updateBboxLabel);
+
+  cfg = await (await fetch("/api/config")).json();
+  const sel = document.getElementById("community");
+  Object.keys(cfg.communities).forEach(name => {
+    const o = document.createElement("option"); o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  });
+  sel.value = "Guerneville";
+  document.getElementById("min-acres").value = cfg.defaults.min_acres ?? 1;
+  document.getElementById("max-slope").value = cfg.defaults.max_slope_pct ?? 8;
+  syncLabels();
+  gotoCommunity();
+  renderListings(cfg.listings || []);
+  wire();
+}
+
+function wire() {
+  document.getElementById("community").addEventListener("change", gotoCommunity);
+  document.getElementById("use-view").addEventListener("click", updateBboxLabel);
+  document.getElementById("min-acres").addEventListener("input", syncLabels);
+  document.getElementById("max-slope").addEventListener("input", syncLabels);
+  document.getElementById("screen-btn").addEventListener("click", runScreen);
+  document.getElementById("add-listing").addEventListener("click", addListing);
+  document.getElementById("export-xlsx").addEventListener("click", () => doExport("xlsx"));
+  document.getElementById("export-csv").addEventListener("click", () => doExport("csv"));
+}
+
+// ---- area -------------------------------------------------------------------
+function gotoCommunity() {
+  const name = document.getElementById("community").value;
+  const b = cfg.communities[name];
+  if (b) { map.fitBounds([[b[1], b[0]], [b[3], b[2]]]); }
+  updateBboxLabel();
+}
+function currentBbox() {
+  const b = map.getBounds();
+  return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+}
+function updateBboxLabel() {
+  const b = currentBbox().map(x => x.toFixed(4));
+  document.getElementById("bbox-label").textContent = `bbox: ${b.join(", ")}`;
+}
+function syncLabels() {
+  document.getElementById("acres-val").textContent =
+    document.getElementById("min-acres").value + " ac";
+  document.getElementById("slope-val").textContent =
+    document.getElementById("max-slope").value + " %";
+}
+
+// ---- screen -----------------------------------------------------------------
+async function runScreen() {
+  const btn = document.getElementById("screen-btn");
+  const line = document.getElementById("status-line");
+  btn.disabled = true;
+  line.innerHTML = `<span class="spinner"></span>Querying parcels, flood, zoning &amp; slope…`;
+  try {
+    const body = {
+      bbox: currentBbox(),
+      min_acres: parseFloat(document.getElementById("min-acres").value),
+      max_slope_pct: parseFloat(document.getElementById("max-slope").value),
+      sfha_fail_pct: document.getElementById("strict-flood").checked ? 0 : 100,
+      only_vacant: document.getElementById("only-vacant").checked,
+    };
+    const res = await fetch("/api/screen", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+    const data = await res.json();
+    lastResults = data.results;
+    renderResults(data);
+    line.textContent = `Scanned ${data.scanned} parcels · screened ${data.count}` +
+      (data.truncated ? ` (capped at ${data.max_parcels})` : "");
+  } catch (e) {
+    line.innerHTML = `<span style="color:var(--fail)">Error: ${e.message}</span>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function styleFor(f) {
+  const c = STATUS_COLOR[f.properties.status] || "#888";
+  const sel = f.properties.apn === selectedApn;
+  return { color: c, weight: sel ? 3 : 1.5, fillColor: c,
+    fillOpacity: sel ? 0.5 : 0.28 };
+}
+
+function renderResults(data) {
+  // Map polygons.
+  parcelLayer.clearLayers();
+  const fc = { type: "FeatureCollection", features: lastResults.map(r => ({
+    type: "Feature", properties: r, geometry: r.geometry,
+  })) };
+  parcelLayer.addData(fc);
+  if (lastResults.length) { try { map.fitBounds(parcelLayer.getBounds().pad(0.1)); } catch (e) {} }
+
+  // Summary pills.
+  const by = { PASS: 0, REVIEW: 0, FAIL: 0 };
+  lastResults.forEach(r => by[r.status]++);
+  document.getElementById("summary").innerHTML =
+    `<strong>${data.count}</strong> parcels` +
+    `<span class="pill pass">PASS ${by.PASS}</span>` +
+    `<span class="pill review">REVIEW ${by.REVIEW}</span>` +
+    `<span class="pill fail">FAIL ${by.FAIL}</span>`;
+
+  // Table.
+  const cols = ["Status", "Score", "APN", "Address", "Juris.", "Zoning", "Permit",
+    "FEMA", "%SFHA", "Slope%", "Acres", "Vacant/Use", "List $", "Notes", "Links"];
+  document.querySelector("#results-table thead").innerHTML =
+    "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
+  const tb = document.querySelector("#results-table tbody");
+  tb.innerHTML = "";
+  lastResults.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.dataset.apn = r.apn;
+    const s = r.status.toLowerCase();
+    const permit = permitLabel(r);
+    const price = r.list_price ? r.list_price : (r.listed ? "listed" : "");
+    tr.innerHTML =
+      `<td><span class="tag ${s}">${r.status}</span></td>` +
+      `<td>${r.score}</td>` +
+      `<td class="mono">${r.apn}</td>` +
+      `<td>${esc(r.address)}</td>` +
+      `<td>${esc(shortJuris(r.jurisdiction))}</td>` +
+      `<td>${r.zoning || "—"}</td>` +
+      `<td>${permit}</td>` +
+      `<td>${r.flood_zone}</td>` +
+      `<td>${r.sfha_pct ?? 0}</td>` +
+      `<td>${r.slope_mean_pct ?? "—"}</td>` +
+      `<td>${r.acres ?? "—"}</td>` +
+      `<td>${esc(r.vacant_category || "")}</td>` +
+      `<td>${r.listing_url ? `<a href="${r.listing_url}" target="_blank">${esc(price)}</a>` : esc(price)}</td>` +
+      `<td class="reasons">${esc((r.reasons || []).join("; "))}</td>` +
+      `<td>${linkCell(r)}</td>`;
+    tr.addEventListener("click", () => selectRow(r.apn));
+    tb.appendChild(tr);
+  });
+
+  document.getElementById("export-xlsx").disabled = !lastResults.length;
+  document.getElementById("export-csv").disabled = !lastResults.length;
+}
+
+function permitLabel(r) {
+  if (r.storage_permitted === true)
+    return r.permit_type === "by-right" ? "by-right" : "use-permit";
+  if (r.storage_permitted === false) return "no";
+  return "verify";
+}
+function shortJuris(j) {
+  return j && j.startsWith("Unincorporated") ? "Unincorp." : j;
+}
+function linkCell(r) {
+  const l = r.links || {};
+  return `<a href="${l.county}" target="_blank">county</a> · ` +
+    `<a href="${l.google_maps}" target="_blank">map</a> · ` +
+    `<a href="${l.fema}" target="_blank">FEMA</a>` +
+    (r.zoning_verify_url ? ` · <a href="${r.zoning_verify_url}" target="_blank">code</a>` : "");
+}
+
+function selectRow(apn) {
+  selectedApn = apn;
+  document.querySelectorAll("#results-table tbody tr").forEach(tr =>
+    tr.classList.toggle("sel", tr.dataset.apn === apn));
+  const tr = document.querySelector(`#results-table tbody tr[data-apn="${CSS.escape(apn)}"]`);
+  if (tr) tr.scrollIntoView({ block: "nearest" });
+  parcelLayer.setStyle(styleFor);
+  const r = lastResults.find(x => x.apn === apn);
+  if (r) map.panTo([r.lat, r.lon]);
+}
+
+// ---- listings ---------------------------------------------------------------
+async function addListing() {
+  const apn = document.getElementById("l-apn").value.trim();
+  if (!apn) return;
+  const body = {
+    apn,
+    url: document.getElementById("l-url").value.trim() || null,
+    price: document.getElementById("l-price").value.trim() || null,
+  };
+  const items = await (await fetch("/api/listings", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })).json();
+  ["l-apn", "l-url", "l-price"].forEach(id => document.getElementById(id).value = "");
+  renderListings(items);
+}
+async function delListing(apn) {
+  renderListings(await (await fetch(`/api/listings/${encodeURIComponent(apn)}`,
+    { method: "DELETE" })).json());
+}
+function renderListings(items) {
+  const ul = document.getElementById("listing-list");
+  ul.innerHTML = "";
+  items.forEach(i => {
+    const li = document.createElement("li");
+    const label = i.url ? `<a href="${i.url}" target="_blank">${esc(i.apn)}</a>` : esc(i.apn);
+    li.innerHTML = `<span>${label}${i.price ? " · " + esc(i.price) : ""}</span>` +
+      `<button title="remove">✕</button>`;
+    li.querySelector("button").addEventListener("click", () => delListing(i.apn));
+    ul.appendChild(li);
+  });
+}
+
+// ---- export -----------------------------------------------------------------
+async function doExport(fmt) {
+  const res = await fetch("/api/export", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ results: lastResults, format: fmt }),
+  });
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `storage_screen.${fmt}`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ---- misc -------------------------------------------------------------------
+function addLegend() {
+  const lc = L.control({ position: "bottomleft" });
+  lc.onAdd = () => {
+    const d = L.DomUtil.create("div", "legend");
+    d.innerHTML =
+      `<i style="background:${STATUS_COLOR.PASS}"></i>Pass<br>` +
+      `<i style="background:${STATUS_COLOR.REVIEW}"></i>Review<br>` +
+      `<i style="background:${STATUS_COLOR.FAIL}"></i>Fail`;
+    return d;
+  };
+  lc.addTo(map);
+}
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+init();

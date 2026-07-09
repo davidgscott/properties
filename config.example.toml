@@ -1,0 +1,26 @@
+# Storage Screener — optional configuration
+#
+# The free MVP needs NO API keys. Copy this file to `config.toml` (git-ignored)
+# only if you want to override defaults or add optional paid sources later.
+
+[server]
+host = "127.0.0.1"
+port = 8000
+
+[thresholds]
+# A parcel is scored against these defaults (the UI can override per-run).
+min_acres = 1.0          # self-storage typically wants ~1-5+ usable acres
+max_slope_pct = 8.0      # "flat-ish, buildable" ceiling (mean slope)
+sfha_fail_pct = 0.0      # % of parcel in a FEMA SFHA that triggers a hard fail
+                         #   0.0 = any SFHA overlap fails (strict, recommended
+                         #   for the Russian River corridor)
+
+[screen]
+max_parcels = 80         # cap parcels enriched per run (politeness + speed)
+slope_grid = 3           # NxN elevation grid per parcel (3 = 9 samples/parcel)
+concurrency = 6          # max simultaneous outbound API calls
+
+# --- Optional paid sources (NOT used unless a key is present) -----------------
+# [keys]
+# regrid_token = ""      # regrid.com normalized parcel/zoning (city expansion)
+# attom_api_key = ""     # attomdata.com property/vacancy enrichment
