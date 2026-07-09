@@ -68,24 +68,31 @@ Click the blue **Screen parcels** button.
 
 ## Step 4 — Read your results
 
-At the top you'll see a summary: **how many PASS, REVIEW, and FAIL.**
+The list shows **only the parcels worth a look** — 🟢 **PASS** and 🟡 **REVIEW**.
+Parcels that fail a hard filter are hidden and only tallied (e.g. "107 screened
+out"). If nothing qualifies you'll see **"No qualifying parcels found"** — widen
+the radius or loosen the criteria. At the top, the counts (**All / PASS /
+REVIEW**) double as filters.
 
-### The three verdicts
+### The two verdicts you'll see
 
 | Badge | Meaning |
 |---|---|
 | 🟢 **PASS** | Clears every hard filter: **not** in a flood zone, zoning **permits** storage (with solid confidence), flat enough, and big enough. Your best leads. |
 | 🟡 **REVIEW** | Promising but needs a human look — usually because storage is allowed but the zoning read needs confirming, the parcel spans several zones, or slope data was missing. |
-| 🔴 **FAIL** | Ruled out by a hard filter — in a flood zone, zoning doesn't allow storage, too steep, or too small. The row lists the reason. |
 
-The **Score** (0–100) ranks parcels within those groups — higher is better. It
-rewards being flood-free, cleanly zoned, flat, larger, and vacant/for-sale.
+Parcels that are **screened out** (🔴 would-be FAIL) are ones ruled out by a hard
+filter — in a flood zone, zoning doesn't allow storage, too steep, or too small.
+They aren't listed, just counted.
+
+The **Score** (0–100) ranks the qualifying parcels — higher is better. It rewards
+being flood-free, cleanly zoned, flat, larger, and vacant/for-sale.
 
 ### The columns
 
 | Column | What it tells you |
 |---|---|
-| **Status** | PASS / REVIEW / FAIL (above). |
+| **Status** | PASS or REVIEW (screened-out parcels aren't listed). |
 | **Score** | Overall suitability rank (higher = better). |
 | **APN** | Assessor's Parcel Number — the county's unique ID for the parcel. |
 | **Address** | Situs address if the county has one (`0 NONE` means unaddressed land — normal for vacant parcels). |

@@ -50,17 +50,20 @@ seeing current published data — no stale copy bundled into the tool.
 
 ---
 
-## What do PASS / REVIEW / FAIL mean?
+## What do PASS / REVIEW mean, and where did the failures go?
+
+The results list shows **only the parcels worth a look**:
 
 - 🟢 **PASS** — clears every hard filter: not in a flood zone, zoning permits
   storage with **high confidence**, flat enough, and big enough.
 - 🟡 **REVIEW** — promising but a human should confirm something: the zoning is
   permissive but the read needs verifying (**medium confidence**), the parcel
   spans several zones, or slope data was unavailable.
-- 🔴 **FAIL** — ruled out by a hard filter (in a flood zone, zoning doesn't allow
-  storage, too steep, or too small). The row's **Notes** say why.
 
-The **Score** (0–100) just ranks parcels within those groups.
+Parcels ruled out by a hard filter (in a flood zone, zoning doesn't allow
+storage, too steep, or too small) are **screened out** — not listed or plotted,
+just tallied as "N screened out." If nothing qualifies, you'll see **"No
+qualifying parcels found."** The **Score** (0–100) ranks the qualifying parcels.
 
 ## What does the "confidence level" mean?
 

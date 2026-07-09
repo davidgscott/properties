@@ -181,33 +181,48 @@ function priceKey(r) {
 function renderResults(data) {
   statusFilter = null; sortCol = null; sortDir = 1;   // reset on each new screen
   drawParcels();
-  if (lastResults.length) { try { map.fitBounds(parcelLayer.getBounds().pad(0.1)); } catch (e) {} }
+  const q = qualifying();
+  if (q.length) { try { map.fitBounds(parcelLayer.getBounds().pad(0.1)); } catch (e) {} }
 
-  // Summary — clickable status filters + a clear affordance.
-  const by = { PASS: 0, REVIEW: 0, FAIL: 0 };
-  lastResults.forEach(r => by[r.status]++);
-  document.getElementById("summary").innerHTML =
-    `<span class="filter-label" title="Show all">Filter:</span>` +
-    `<span class="pill all" data-status="" title="Show all">All ${data.count}</span>` +
-    `<span class="pill pass" data-status="PASS" title="Show only PASS">PASS ${by.PASS}</span>` +
-    `<span class="pill review" data-status="REVIEW" title="Show only REVIEW">REVIEW ${by.REVIEW}</span>` +
-    `<span class="pill fail" data-status="FAIL" title="Show only FAIL">FAIL ${by.FAIL}</span>` +
-    `<span class="filter-clear" title="Clear filter">✕ clear</span>`;
-  const clear = () => { statusFilter = null; applyFilter(); };
-  document.querySelectorAll("#summary .pill").forEach(p => {
-    p.addEventListener("click", () => {
-      const s = p.dataset.status || null;
-      statusFilter = (statusFilter === s) ? null : s;   // click active pill = clear
-      applyFilter();
+  const summary = document.getElementById("summary");
+  const by = { PASS: 0, REVIEW: 0 };
+  q.forEach(r => by[r.status]++);
+  const screenedOut = lastResults.length - q.length;
+  const outNote = screenedOut
+    ? `<span class="screened-out" title="Parcels ruled out — in a flood zone, wrong zoning, too steep, or too small">${screenedOut} screened out</span>`
+    : "";
+
+  if (!q.length) {
+    // Zillow-style empty state — nothing qualified.
+    summary.innerHTML =
+      `<span class="empty-msg">No qualifying parcels found in this area.</span>` +
+      `<span class="muted">Try a larger radius, or loosen the criteria (min size / max slope).</span>` +
+      outNote;
+    document.querySelector("#results-table thead").innerHTML = "";
+    document.querySelector("#results-table tbody").innerHTML = "";
+  } else {
+    summary.innerHTML =
+      `<span class="filter-label" title="Show all">Filter:</span>` +
+      `<span class="pill all" data-status="" title="Show all">All ${q.length}</span>` +
+      `<span class="pill pass" data-status="PASS" title="Show only PASS">PASS ${by.PASS}</span>` +
+      `<span class="pill review" data-status="REVIEW" title="Show only REVIEW">REVIEW ${by.REVIEW}</span>` +
+      `<span class="filter-clear" title="Clear filter">✕ clear</span>` +
+      outNote;
+    const clear = () => { statusFilter = null; applyFilter(); };
+    summary.querySelectorAll(".pill").forEach(p => {
+      p.addEventListener("click", () => {
+        const s = p.dataset.status || null;
+        statusFilter = (statusFilter === s) ? null : s;   // click active pill = clear
+        applyFilter();
+      });
     });
-  });
-  document.querySelector("#summary .filter-label").addEventListener("click", clear);
-  document.querySelector("#summary .filter-clear").addEventListener("click", clear);
-
-  renderHeader();
-  renderRows();
-  document.getElementById("export-xlsx").disabled = !lastResults.length;
-  document.getElementById("export-csv").disabled = !lastResults.length;
+    summary.querySelector(".filter-label").addEventListener("click", clear);
+    summary.querySelector(".filter-clear").addEventListener("click", clear);
+    renderHeader();
+    renderRows();
+  }
+  document.getElementById("export-xlsx").disabled = !q.length;
+  document.getElementById("export-csv").disabled = !q.length;
 }
 
 // Build the sortable header row.
@@ -234,11 +249,18 @@ function setSort(i) {
   renderRows();
 }
 
-// Results in the current sort order (falls back to the server's ranking).
+// Parcels worth showing — PASS or REVIEW. FAIL parcels are screened out: they
+// are not listed or plotted on the map; only their count is noted.
+function qualifying() {
+  return lastResults.filter(r => r.status !== "FAIL");
+}
+
+// Qualifying results in the current sort order (falls back to server ranking).
 function sortedResults() {
-  if (sortCol == null) return lastResults;
+  const base = qualifying();
+  if (sortCol == null) return base;
   const acc = COLUMNS[sortCol].sort;
-  return [...lastResults].sort((a, b) => {
+  return [...base].sort((a, b) => {
     const va = acc(a), vb = acc(b);
     if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
     return String(va).localeCompare(String(vb)) * sortDir;
