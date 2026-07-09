@@ -12,6 +12,7 @@
     <aside id="panel">
       <h1>Storage&nbsp;Screener</h1>
       <p class="sub">Self-storage parcel screening — Guerneville &amp; Sonoma County</p>
+      <button id="help-btn" class="ghost help-open">❓ Help &amp; Guide</button>
 
       <section class="card">
         <h2>1 · Area — radius from Guerneville</h2>
@@ -87,6 +88,68 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <div id="help-modal" class="help-overlay" hidden>
+    <div class="help-box" role="dialog" aria-modal="true" aria-label="Help and Guide">
+      <button id="help-close" class="help-close" aria-label="Close">✕</button>
+      <h2>❓ Help &amp; Guide</h2>
+      <p class="help-lead">Screen land around Guerneville for a self-storage
+        facility. Everything below is a <strong>screening aid</strong> — confirm
+        anything promising with Permit Sonoma and FEMA before acting.</p>
+
+      <h3>Getting started (3 steps)</h3>
+      <ol>
+        <li><strong>Set the radius</strong> from Guerneville (the dashed circle
+          on the map).</li>
+        <li><strong>Set your criteria</strong> — min acres, max slope, and the
+          filters. Ticking <em>Commercial / industrial vacant land only</em> and
+          <em>Unincorporated county only</em> gives the fastest, most focused run.</li>
+        <li>Click <strong>Screen parcels</strong> and wait ~1–2 minutes (it
+          checks flood, zoning &amp; slope live). Results fill the map and table.</li>
+      </ol>
+
+      <h3>How to read your results</h3>
+      <p>Each parcel gets a verdict:</p>
+      <ul>
+        <li><span class="tag pass">PASS</span> clears every filter — not in a
+          flood zone, zoning permits storage (high confidence), flat, big enough.
+          Your best leads.</li>
+        <li><span class="tag review">REVIEW</span> promising but needs a human
+          look — zoning read to confirm, multiple zones, or missing slope data.</li>
+        <li><span class="tag fail">FAIL</span> ruled out — the <em>Notes</em>
+          column says why (flood zone, zoning, too steep, or too small).</li>
+      </ul>
+      <p>Key columns: <strong>FEMA</strong> (<code>X</code> = outside the flood
+        risk area = good), <strong>%SFHA</strong> (percent in a flood zone),
+        <strong>Slope%</strong> (lower = flatter), <strong>Permit</strong>
+        (by-right / use-permit / no). Each row links out to the
+        <strong>county</strong> record, <strong>Google map</strong>,
+        <strong>FEMA</strong> flood viewer, and the zoning <strong>code</strong>.</p>
+
+      <h3>Where the data comes from (free, official)</h3>
+      <table class="help-table">
+        <tr><th>Parcels</th><td>Sonoma County GIS (assessor)</td></tr>
+        <tr><th>Zoning</th><td>Permit Sonoma zoning layer</td></tr>
+        <tr><th>Flood</th><td>FEMA National Flood Hazard Layer</td></tr>
+        <tr><th>Slope</th><td>USGS 3DEP elevation</td></tr>
+      </table>
+      <p class="small muted">Data is pulled live each time you screen. No
+        accounts or API keys; it's free to run.</p>
+
+      <h3>How reliable is it?</h3>
+      <p>FEMA flood data is the authoritative regulatory layer. Parcel and zoning
+        data come straight from the county. <strong>Confidence</strong> refers to
+        how sure the tool is that a zone permits storage: <strong>high</strong>
+        for C3/MP/M2 (the code says so explicitly), <strong>medium</strong> for
+        M1/M3 (a broader clause — verify). It does <em>not</em> check wetlands,
+        access, utilities, title, or whether a parcel is actually for sale.</p>
+
+      <p class="help-more">📖 Full guide &amp; FAQ:
+        <a href="https://github.com/davidgscott/properties/tree/main/docs"
+           target="_blank" rel="noopener">github.com/davidgscott/properties/docs</a>
+        — Quick Start, Tutorial, and a detailed FAQ.</p>
+    </div>
   </div>
 
   <script src="/vendor/leaflet.js"></script>

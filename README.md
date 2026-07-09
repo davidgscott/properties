@@ -17,6 +17,20 @@ map over the live FEMA flood layer, and exportable to Excel/CSV.
 > **Screening aid, not legal advice.** Confirm zoning and flood status with
 > Permit Sonoma (707-565-1900) and FEMA before acting on any result.
 
+## Documentation
+
+New here, or handing this to someone non-technical? Start with these:
+
+- **[Quick Start](docs/QUICKSTART.md)** — install Python, get the tool running,
+  and run your first screen (no coding).
+- **[Tutorial](docs/TUTORIAL.md)** — a guided walkthrough; what every control,
+  column, and color means.
+- **[FAQ](docs/FAQ.md)** — where the data comes from, how reliable it is, what
+  the confidence levels mean, and what the tool does *not* check.
+
+The running tool also has a **❓ Help & Guide** button with a quick version of
+the above.
+
 ## Quick start
 
 ```bash

@@ -63,6 +63,15 @@ function wire() {
   document.getElementById("add-listing").addEventListener("click", addListing);
   document.getElementById("export-xlsx").addEventListener("click", () => doExport("xlsx"));
   document.getElementById("export-csv").addEventListener("click", () => doExport("csv"));
+
+  // Help modal open/close.
+  const modal = document.getElementById("help-modal");
+  const showHelp = () => { modal.hidden = false; };
+  const hideHelp = () => { modal.hidden = true; };
+  document.getElementById("help-btn").addEventListener("click", showHelp);
+  document.getElementById("help-close").addEventListener("click", hideHelp);
+  modal.addEventListener("click", e => { if (e.target === modal) hideHelp(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") hideHelp(); });
 }
 
 // ---- area -------------------------------------------------------------------
