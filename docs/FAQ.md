@@ -62,8 +62,10 @@ The results list shows **only the parcels worth a look**:
 
 Parcels ruled out by a hard filter (in a flood zone, zoning doesn't allow
 storage, too steep, or too small) are **screened out** — not listed or plotted,
-just tallied as "N screened out." If nothing qualifies, you'll see **"No
-qualifying parcels found."** The **Score** (0–100) ranks the qualifying parcels.
+just tallied as "N screened out." Click **show** next to that count to reveal
+them; each shows the reason it failed in the **Notes** column. If nothing
+qualifies, you'll see **"No qualifying parcels found."** The **Score** (0–100)
+ranks the qualifying parcels.
 
 ## What does the "confidence level" mean?
 

@@ -70,9 +70,11 @@ Click the blue **Screen parcels** button.
 
 The list shows **only the parcels worth a look** — 🟢 **PASS** and 🟡 **REVIEW**.
 Parcels that fail a hard filter are hidden and only tallied (e.g. "107 screened
-out"). If nothing qualifies you'll see **"No qualifying parcels found"** — widen
-the radius or loosen the criteria. At the top, the counts (**All / PASS /
-REVIEW**) double as filters.
+out"). Want to see them? Click **show** next to that count — the failed parcels
+appear with the reason in the **Notes** column, and a **FAIL** filter pill lets
+you isolate them; click **hide** to collapse again. If nothing qualifies you'll
+see **"No qualifying parcels found"** — widen the radius or loosen the criteria.
+At the top, the counts (**All / PASS / REVIEW**) double as filters.
 
 ### The two verdicts you'll see
 

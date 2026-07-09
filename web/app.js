@@ -7,6 +7,7 @@ const FEMA_NFHL = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/Map
 let map, parcelLayer, femaLayer, radiusCircle, centerMarker;
 let lastResults = [], selectedApn = null, statusFilter = null;
 let sortCol = null, sortDir = 1;         // table sort state (1 asc, -1 desc)
+let showScreenedOut = false;             // reveal ruled-out (FAIL) parcels
 let cfg = { defaults: {}, guerneville_center: [-122.9958, 38.5021], max_radius_miles: 20 };
 const MILES_TO_M = 1609.344;
 
@@ -137,7 +138,7 @@ async function runScreen() {
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
     const data = await res.json();
     lastResults = data.results;
-    renderResults(data);
+    renderResults();
     line.textContent = `${data.in_area} candidate parcels in radius · screened ${data.count}` +
       (data.truncated ? ` (capped at ${data.max_parcels}, largest first)` : "");
   } catch (e) {
@@ -178,36 +179,52 @@ function priceKey(r) {
   return r.listed ? 0 : -1;
 }
 
-function renderResults(data) {
-  statusFilter = null; sortCol = null; sortDir = 1;   // reset on each new screen
-  drawParcels();
-  const q = qualifying();
-  if (q.length) { try { map.fitBounds(parcelLayer.getBounds().pad(0.1)); } catch (e) {} }
+function renderResults() {
+  statusFilter = null; sortCol = null; sortDir = 1; showScreenedOut = false;
+  rerender();
+  if (displayed().length) { try { map.fitBounds(parcelLayer.getBounds().pad(0.1)); } catch (e) {} }
+}
 
+// Rebuild the summary, table, and map for the current display state (used on a
+// new screen and after toggling show/hide screened-out). Clears any filter.
+function rerender() {
+  statusFilter = null;
+  renderSummary();
+  renderTable();
+  const n = displayed().length;
+  document.getElementById("export-xlsx").disabled = !n;
+  document.getElementById("export-csv").disabled = !n;
+}
+
+// Summary line: filter pills, the "N screened out · show/hide" toggle, empty state.
+function renderSummary() {
   const summary = document.getElementById("summary");
-  const by = { PASS: 0, REVIEW: 0 };
-  q.forEach(r => by[r.status]++);
-  const screenedOut = lastResults.length - q.length;
-  const outNote = screenedOut
-    ? `<span class="screened-out" title="Parcels ruled out — in a flood zone, wrong zoning, too steep, or too small">${screenedOut} screened out</span>`
+  const c = { PASS: 0, REVIEW: 0, FAIL: 0 };
+  lastResults.forEach(r => c[r.status]++);
+  const qCount = c.PASS + c.REVIEW;
+
+  const toggle = c.FAIL
+    ? `<span class="screened-out">${c.FAIL} screened out · ` +
+      `<a class="so-toggle" title="${showScreenedOut ? "Hide" : "Show"} the ruled-out parcels and why they failed">` +
+      `${showScreenedOut ? "hide" : "show"}</a></span>`
     : "";
 
-  if (!q.length) {
-    // Zillow-style empty state — nothing qualified.
+  if (qCount === 0 && !showScreenedOut) {
     summary.innerHTML =
       `<span class="empty-msg">No qualifying parcels found in this area.</span>` +
       `<span class="muted">Try a larger radius, or loosen the criteria (min size / max slope).</span>` +
-      outNote;
-    document.querySelector("#results-table thead").innerHTML = "";
-    document.querySelector("#results-table tbody").innerHTML = "";
+      toggle;
   } else {
-    summary.innerHTML =
+    let html =
       `<span class="filter-label" title="Show all">Filter:</span>` +
-      `<span class="pill all" data-status="" title="Show all">All ${q.length}</span>` +
-      `<span class="pill pass" data-status="PASS" title="Show only PASS">PASS ${by.PASS}</span>` +
-      `<span class="pill review" data-status="REVIEW" title="Show only REVIEW">REVIEW ${by.REVIEW}</span>` +
-      `<span class="filter-clear" title="Clear filter">✕ clear</span>` +
-      outNote;
+      `<span class="pill all" data-status="" title="Show all">All ${displayed().length}</span>` +
+      `<span class="pill pass" data-status="PASS" title="Show only PASS">PASS ${c.PASS}</span>` +
+      `<span class="pill review" data-status="REVIEW" title="Show only REVIEW">REVIEW ${c.REVIEW}</span>`;
+    if (showScreenedOut)
+      html += `<span class="pill fail" data-status="FAIL" title="Show only screened-out">FAIL ${c.FAIL}</span>`;
+    html += `<span class="filter-clear" title="Clear filter">✕ clear</span>` + toggle;
+    summary.innerHTML = html;
+
     const clear = () => { statusFilter = null; applyFilter(); };
     summary.querySelectorAll(".pill").forEach(p => {
       p.addEventListener("click", () => {
@@ -218,11 +235,22 @@ function renderResults(data) {
     });
     summary.querySelector(".filter-label").addEventListener("click", clear);
     summary.querySelector(".filter-clear").addEventListener("click", clear);
+  }
+
+  const t = summary.querySelector(".so-toggle");
+  if (t) t.addEventListener("click", () => { showScreenedOut = !showScreenedOut; rerender(); });
+}
+
+// Build the header + rows for the current display set, or clear the table.
+function renderTable() {
+  if (!displayed().length) {
+    document.querySelector("#results-table thead").innerHTML = "";
+    document.querySelector("#results-table tbody").innerHTML = "";
+    drawParcels();
+  } else {
     renderHeader();
     renderRows();
   }
-  document.getElementById("export-xlsx").disabled = !q.length;
-  document.getElementById("export-csv").disabled = !q.length;
 }
 
 // Build the sortable header row.
@@ -249,15 +277,20 @@ function setSort(i) {
   renderRows();
 }
 
-// Parcels worth showing — PASS or REVIEW. FAIL parcels are screened out: they
-// are not listed or plotted on the map; only their count is noted.
+// Parcels worth showing — PASS or REVIEW. FAIL parcels are screened out.
 function qualifying() {
   return lastResults.filter(r => r.status !== "FAIL");
 }
 
-// Qualifying results in the current sort order (falls back to server ranking).
+// The set currently on display: qualifying only, or everything when the user
+// has clicked "show" screened-out.
+function displayed() {
+  return showScreenedOut ? lastResults : qualifying();
+}
+
+// Displayed results in the current sort order (falls back to server ranking).
 function sortedResults() {
-  const base = qualifying();
+  const base = displayed();
   if (sortCol == null) return base;
   const acc = COLUMNS[sortCol].sort;
   return [...base].sort((a, b) => {
