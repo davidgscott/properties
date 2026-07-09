@@ -26,11 +26,22 @@ python run.py                 # opens http://127.0.0.1:8000
 
 No API keys are required — all four data domains use free public services.
 
-1. Pick a **community** (or pan/zoom the map and “Use current map view”).
-2. Set **min acreage** and **max slope**; toggle *vacant-only* / *strict flood*.
+1. Set the **radius** from downtown Guerneville (number box or slider, default
+   15 mi) — the dashed circle on the map shows the search area.
+2. Set **min acreage** and **max slope**; toggle *vacant-only*,
+   *commercial/industrial only*, *unincorporated county only*, *strict flood*.
 3. Click **Screen parcels**.
 4. Optionally paste **listings** (APN + LoopNet/Crexi URL) to tag for-sale parcels.
 5. **Export** the results to `.xlsx` / `.csv`.
+
+The area is a **configurable-radius circle around Guerneville**. Because the
+radius can cover tens of thousands of parcels, the vacant + size (+ optional
+commercial/industrial and unincorporated-only) filters are pushed into the
+parcel query server-side, so only the relevant few hundred candidates are
+pulled; they're clipped to the circle, ranked largest-first, and capped before
+enrichment. Example: a 15-mile radius with *commercial/industrial vacant,
+unincorporated* yields ~150 candidates and surfaces flat, flood-free M2/M3/MP
+industrial parcels near the county airport as the top prospects.
 
 ## Data sources (all verified live, free)
 
@@ -78,11 +89,13 @@ run.py                 python run.py
 
 - **Phase 1 (done):** Guerneville + unincorporated county — flood, county zoning,
   slope, vacant, export.
-- **Phase 2:** add incorporated cities (jurisdiction resolver is in place); fill
-  each city's zone→storage mapping in `zoning_lookup.yaml`, starting with Santa
-  Rosa.
-- **Phase 3 (optional, paid):** Regrid normalized city zoning; BAREIS MLS feed
-  (if licensed); ATTOM/Realtor listings API. Keys go in `config.toml` (git-ignored).
+- **Phase 2 (done):** configurable-radius-from-Guerneville area mode with a
+  server-side vacant/size/commercial/unincorporated prefilter so a wide radius
+  stays tractable. Focused on unincorporated Sonoma County (the county zoning
+  layer's coverage); incorporated cities are skipped by default.
+- **Phase 3 (optional, paid):** Regrid normalized city zoning (to cover
+  incorporated cities); BAREIS MLS feed (if licensed); ATTOM/Realtor listings
+  API. Keys go in `config.toml` (git-ignored).
 
 ## Configuration
 

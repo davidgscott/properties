@@ -70,16 +70,20 @@ LINKS = {
     "fema_msc": "https://msc.fema.gov/portal/search?AddressQuery={lat}%2C{lon}",
 }
 
-# Community presets: name -> [west, south, east, north] bbox (WGS84).
+# Primary area of interest: a radius around downtown Guerneville. Most land in
+# this radius is unincorporated Sonoma County, which the authoritative county
+# zoning layer covers.
+GUERNEVILLE_CENTER = (-122.9958, 38.5021)  # (lon, lat) — downtown
+DEFAULT_RADIUS_MILES = 15.0
+MAX_RADIUS_MILES = 20.0
+
+# Community presets kept as optional quick jumps: name -> [w, s, e, n] bbox.
 COMMUNITIES: dict[str, list[float]] = {
     "Guerneville": [-123.030, 38.485, -122.965, 38.520],
     "Forestville": [-122.920, 38.460, -122.870, 38.490],
     "Monte Rio": [-123.020, 38.450, -122.980, 38.480],
+    "Rio Nido / Rionido": [-122.980, 38.505, -122.945, 38.525],
     "Sebastopol": [-122.850, 38.380, -122.790, 38.420],
-    "Windsor": [-122.840, 38.520, -122.780, 38.560],
-    "Healdsburg": [-122.900, 38.600, -122.840, 38.640],
-    "Cloverdale": [-123.040, 38.780, -123.000, 38.820],
-    "Santa Rosa (NW)": [-122.780, 38.440, -122.700, 38.480],
 }
 
 
@@ -92,7 +96,7 @@ class Thresholds:
 
 @dataclass
 class ScreenLimits:
-    max_parcels: int = 80
+    max_parcels: int = 120
     slope_grid: int = 3
     concurrency: int = 6
 

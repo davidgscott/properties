@@ -14,12 +14,14 @@
       <p class="sub">Self-storage parcel screening — Guerneville &amp; Sonoma County</p>
 
       <section class="card">
-        <h2>1 · Area</h2>
-        <label>Community preset
-          <select id="community"></select>
+        <h2>1 · Area — radius from Guerneville</h2>
+        <label>Radius <span id="radius-val" class="val"></span>
+          <input type="range" id="radius-slider" min="1" max="20" step="1" />
         </label>
-        <button id="use-view" class="ghost">Use current map view as area</button>
-        <div id="bbox-label" class="mono small"></div>
+        <label>Exact miles
+          <input type="number" id="radius-num" min="1" max="20" step="0.5" />
+        </label>
+        <div class="small muted" id="area-note"></div>
       </section>
 
       <section class="card">
@@ -33,6 +35,14 @@
         <label class="check">
           <input type="checkbox" id="only-vacant" checked />
           Vacant land only (else include any listed parcel)
+        </label>
+        <label class="check">
+          <input type="checkbox" id="commercial-only" />
+          Commercial / industrial vacant land only (assessor class)
+        </label>
+        <label class="check">
+          <input type="checkbox" id="uninc-only" checked />
+          Unincorporated county only (skip cities)
         </label>
         <label class="check">
           <input type="checkbox" id="strict-flood" checked />

@@ -4,12 +4,14 @@
 const STATUS_COLOR = { PASS: "#1a7f37", REVIEW: "#c69214", FAIL: "#b42318" };
 const FEMA_NFHL = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer";
 
-let map, parcelLayer, femaLayer, lastResults = [], selectedApn = null;
-let cfg = { defaults: {}, communities: {} };
+let map, parcelLayer, femaLayer, radiusCircle, centerMarker;
+let lastResults = [], selectedApn = null;
+let cfg = { defaults: {}, guerneville_center: [-122.9958, 38.5021], max_radius_miles: 20 };
+const MILES_TO_M = 1609.344;
 
 // ---- init -------------------------------------------------------------------
 async function init() {
-  map = L.map("map", { zoomControl: true }).setView([38.502, -122.996], 13);
+  map = L.map("map", { zoomControl: true }).setView([38.5021, -122.9958], 12);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19, attribution: "© OpenStreetMap",
   }).addTo(map);
@@ -20,31 +22,41 @@ async function init() {
     style: styleFor,
     onEachFeature: (f, layer) => layer.on("click", () => selectRow(f.properties.apn)),
   }).addTo(map);
+  radiusCircle = L.circle([38.5021, -122.9958], { radius: 15 * MILES_TO_M,
+    color: "#1f6feb", weight: 2, fill: false, dashArray: "6 6" }).addTo(map);
 
-  L.control.layers(null, { "FEMA flood zones": femaLayer, "Screened parcels": parcelLayer },
-    { collapsed: false }).addTo(map);
+  L.control.layers(null, {
+    "FEMA flood zones": femaLayer, "Screened parcels": parcelLayer,
+    "Search radius": radiusCircle,
+  }, { collapsed: false }).addTo(map);
   addLegend();
 
-  map.on("moveend", updateBboxLabel);
-
   cfg = await (await fetch("/api/config")).json();
-  const sel = document.getElementById("community");
-  Object.keys(cfg.communities).forEach(name => {
-    const o = document.createElement("option"); o.value = name; o.textContent = name;
-    sel.appendChild(o);
+  const [clon, clat] = cfg.guerneville_center;
+  radiusCircle.setLatLng([clat, clon]);
+  centerMarker = L.circleMarker([clat, clon], { radius: 5, color: "#1f6feb",
+    fillColor: "#1f6feb", fillOpacity: 1 }).addTo(map).bindTooltip("Guerneville");
+
+  const r = cfg.default_radius_miles ?? 15, maxR = cfg.max_radius_miles ?? 20;
+  ["radius-slider", "radius-num"].forEach(id => {
+    document.getElementById(id).max = maxR;
+    document.getElementById(id).value = r;
   });
-  sel.value = "Guerneville";
   document.getElementById("min-acres").value = cfg.defaults.min_acres ?? 1;
   document.getElementById("max-slope").value = cfg.defaults.max_slope_pct ?? 8;
   syncLabels();
-  gotoCommunity();
+  updateRadius();
   renderListings(cfg.listings || []);
   wire();
 }
 
 function wire() {
-  document.getElementById("community").addEventListener("change", gotoCommunity);
-  document.getElementById("use-view").addEventListener("click", updateBboxLabel);
+  document.getElementById("radius-slider").addEventListener("input", e => {
+    document.getElementById("radius-num").value = e.target.value; updateRadius();
+  });
+  document.getElementById("radius-num").addEventListener("input", e => {
+    document.getElementById("radius-slider").value = e.target.value; updateRadius();
+  });
   document.getElementById("min-acres").addEventListener("input", syncLabels);
   document.getElementById("max-slope").addEventListener("input", syncLabels);
   document.getElementById("screen-btn").addEventListener("click", runScreen);
@@ -54,19 +66,16 @@ function wire() {
 }
 
 // ---- area -------------------------------------------------------------------
-function gotoCommunity() {
-  const name = document.getElementById("community").value;
-  const b = cfg.communities[name];
-  if (b) { map.fitBounds([[b[1], b[0]], [b[3], b[2]]]); }
-  updateBboxLabel();
+function radiusMiles() {
+  return parseFloat(document.getElementById("radius-num").value) || 15;
 }
-function currentBbox() {
-  const b = map.getBounds();
-  return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
-}
-function updateBboxLabel() {
-  const b = currentBbox().map(x => x.toFixed(4));
-  document.getElementById("bbox-label").textContent = `bbox: ${b.join(", ")}`;
+function updateRadius() {
+  const mi = radiusMiles();
+  radiusCircle.setRadius(mi * MILES_TO_M);
+  map.fitBounds(radiusCircle.getBounds().pad(0.05));
+  document.getElementById("radius-val").textContent = mi + " mi";
+  document.getElementById("area-note").textContent =
+    `Circle ≈ ${(Math.PI * mi * mi).toFixed(0)} sq mi centered on downtown Guerneville.`;
 }
 function syncLabels() {
   document.getElementById("acres-val").textContent =
@@ -80,14 +89,18 @@ async function runScreen() {
   const btn = document.getElementById("screen-btn");
   const line = document.getElementById("status-line");
   btn.disabled = true;
-  line.innerHTML = `<span class="spinner"></span>Querying parcels, flood, zoning &amp; slope…`;
+  line.innerHTML = `<span class="spinner"></span>Querying parcels, flood, zoning &amp; slope… ` +
+    `(a wide radius can take a minute)`;
   try {
     const body = {
-      bbox: currentBbox(),
+      center: cfg.guerneville_center,
+      radius_miles: radiusMiles(),
       min_acres: parseFloat(document.getElementById("min-acres").value),
       max_slope_pct: parseFloat(document.getElementById("max-slope").value),
       sfha_fail_pct: document.getElementById("strict-flood").checked ? 0 : 100,
       only_vacant: document.getElementById("only-vacant").checked,
+      commercial_only: document.getElementById("commercial-only").checked,
+      unincorporated_only: document.getElementById("uninc-only").checked,
     };
     const res = await fetch("/api/screen", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -97,8 +110,8 @@ async function runScreen() {
     const data = await res.json();
     lastResults = data.results;
     renderResults(data);
-    line.textContent = `Scanned ${data.scanned} parcels · screened ${data.count}` +
-      (data.truncated ? ` (capped at ${data.max_parcels})` : "");
+    line.textContent = `${data.in_area} candidate parcels in radius · screened ${data.count}` +
+      (data.truncated ? ` (capped at ${data.max_parcels}, largest first)` : "");
   } catch (e) {
     line.innerHTML = `<span style="color:var(--fail)">Error: ${e.message}</span>`;
   } finally {

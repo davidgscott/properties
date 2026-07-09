@@ -7,9 +7,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import __version__, listings as listings_store
-from .config import COMMUNITIES, SETTINGS, Thresholds, WEB_DIR
+from .config import (
+    COMMUNITIES, SETTINGS, Thresholds, WEB_DIR,
+    GUERNEVILLE_CENTER, DEFAULT_RADIUS_MILES, MAX_RADIUS_MILES,
+)
 from .export import to_csv, to_xlsx
-from .pipeline import screen_bbox
+from .pipeline import screen_area
 
 app = FastAPI(title="Storage Screener", version=__version__)
 
@@ -18,10 +21,14 @@ app = FastAPI(title="Storage Screener", version=__version__)
 class ScreenRequest(BaseModel):
     bbox: list[float] | None = None
     community: str | None = None
+    center: list[float] | None = None       # [lon, lat]
+    radius_miles: float | None = None
     min_acres: float | None = None
     max_slope_pct: float | None = None
     sfha_fail_pct: float | None = None
     only_vacant: bool = True
+    commercial_only: bool = False
+    unincorporated_only: bool = True
 
 
 class ListingRequest(BaseModel):
@@ -48,6 +55,9 @@ def get_config() -> dict:
     t = SETTINGS.thresholds
     return {
         "communities": COMMUNITIES,
+        "guerneville_center": list(GUERNEVILLE_CENTER),
+        "default_radius_miles": DEFAULT_RADIUS_MILES,
+        "max_radius_miles": MAX_RADIUS_MILES,
         "defaults": {
             "min_acres": t.min_acres,
             "max_slope_pct": t.max_slope_pct,
@@ -60,18 +70,33 @@ def get_config() -> dict:
 
 @app.post("/api/screen")
 async def screen(req: ScreenRequest) -> dict:
-    bbox = req.bbox
-    if bbox is None and req.community:
-        bbox = COMMUNITIES.get(req.community)
-    if not bbox or len(bbox) != 4:
-        raise HTTPException(400, "Provide a valid bbox [w,s,e,n] or a known community.")
     th = SETTINGS.thresholds
     thresholds = Thresholds(
         min_acres=req.min_acres if req.min_acres is not None else th.min_acres,
         max_slope_pct=req.max_slope_pct if req.max_slope_pct is not None else th.max_slope_pct,
         sfha_fail_pct=req.sfha_fail_pct if req.sfha_fail_pct is not None else th.sfha_fail_pct,
     )
-    return await screen_bbox(bbox, thresholds=thresholds, only_vacant=req.only_vacant)
+
+    center = None
+    radius = None
+    bbox = req.bbox
+    if req.center and req.radius_miles:
+        if len(req.center) != 2:
+            raise HTTPException(400, "center must be [lon, lat].")
+        radius = min(float(req.radius_miles), MAX_RADIUS_MILES)
+        center = (req.center[0], req.center[1])
+        bbox = None
+    elif bbox is None and req.community:
+        bbox = COMMUNITIES.get(req.community)
+
+    if center is None and (not bbox or len(bbox) != 4):
+        raise HTTPException(400, "Provide center+radius_miles, a bbox, or a community.")
+
+    return await screen_area(
+        thresholds=thresholds, bbox=bbox, center=center, radius_miles=radius,
+        only_vacant=req.only_vacant, commercial_only=req.commercial_only,
+        unincorporated_only=req.unincorporated_only,
+    )
 
 
 @app.get("/api/listings")

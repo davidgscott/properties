@@ -24,38 +24,75 @@ from .rules.storage_zoning import lookup as zoning_lookup
 from .sources.flood import flood_for_parcel
 from .sources.jurisdiction import jurisdiction_for_point
 from .sources.parcels import (
-    parcels_in_bbox, is_vacant, vacant_category, situs_address,
+    build_where, parcels_where, parcels_by_apn, radius_bbox, haversine_miles,
+    is_vacant, vacant_category, situs_address,
 )
 from .sources.slope import slope_for_parcel
 from .sources.zoning import zoning_for_parcel
 
 
-async def screen_bbox(bbox: list[float], *, thresholds: Thresholds,
-                      only_vacant: bool = True) -> dict:
+async def screen_area(*, thresholds: Thresholds, bbox: list[float] | None = None,
+                      center: tuple[float, float] | None = None,
+                      radius_miles: float | None = None,
+                      only_vacant: bool = True,
+                      commercial_only: bool = False,
+                      unincorporated_only: bool = True) -> dict:
+    """Screen an area given either a bbox or a center + mile radius.
+
+    The vacant/size filter is pushed into the parcel query (server-side) so a
+    large radius stays tractable; candidates are then clipped to the circle,
+    prioritised by acreage, and capped before the expensive enrichment.
+    """
     limits = SETTINGS.screen
     listed_map = listings_store.by_apn()
 
-    async with httpx.AsyncClient(headers={"User-Agent": "StorageScreener/0.1"}) as client:
-        raw = await parcels_in_bbox(client, bbox)
+    query_bbox = bbox
+    if center is not None and radius_miles:
+        query_bbox = radius_bbox(center, radius_miles)
+    if query_bbox is None:
+        raise ValueError("Provide a bbox or center+radius_miles.")
 
-        # Prefilter (cheap, local).
+    where = build_where(only_vacant=only_vacant, min_acres=thresholds.min_acres,
+                        commercial_only=commercial_only,
+                        unincorporated_only=unincorporated_only)
+
+    async with httpx.AsyncClient(headers={"User-Agent": "StorageScreener/0.1"}) as client:
+        raw = await parcels_where(client, query_bbox, where)
+        # Always include manually-listed parcels even if they don't match the
+        # vacant/size filter (a listing means the buyer cares about it).
+        have = {_apn_norm(f["attributes"].get("APN")) for f in raw}
+        extra_apns = [lm["apn"] for k, lm in listed_map.items()
+                      if k and k not in have and lm.get("apn")]
+        if extra_apns:
+            raw += await parcels_by_apn(client, extra_apns)
+
         candidates = []
         for feat in raw:
             a = feat.get("attributes", {})
             geom = feat.get("geometry")
             if not geom:
                 continue
-            acres = a.get("LandSizeAcres")
-            apn_norm = "".join(ch for ch in (a.get("APN") or "") if ch.isalnum())
-            listed = apn_norm in listed_map
-            vacant = is_vacant(a)
-            if acres is not None and acres < thresholds.min_acres and not listed:
+            shape = arcgis_to_shapely(geom)
+            if shape is None or shape.is_empty:
                 continue
-            if only_vacant and not vacant and not listed:
-                continue
-            candidates.append((feat, vacant, listed, listed_map.get(apn_norm)))
+            lon, lat = centroid_lonlat(shape)
+            # Clip to the circle when in radius mode.
+            if center is not None and radius_miles:
+                if haversine_miles(center[0], center[1], lon, lat) > radius_miles:
+                    continue
+            apn_norm = _apn_norm(a.get("APN"))
+            candidates.append({
+                "feat": feat, "shape": shape, "lon": lon, "lat": lat,
+                "vacant": is_vacant(a), "listed": apn_norm in listed_map,
+                "listing": listed_map.get(apn_norm),
+                "acres": a.get("LandSizeAcres") or 0,
+            })
 
-        truncated = len(candidates) > limits.max_parcels
+        in_area = len(candidates)
+        # Prioritise larger parcels (more likely to fit a facility) and always
+        # keep listed ones near the front.
+        candidates.sort(key=lambda c: (c["listed"], c["acres"]), reverse=True)
+        truncated = in_area > limits.max_parcels
         candidates = candidates[: limits.max_parcels]
 
         sem = asyncio.Semaphore(limits.concurrency)
@@ -71,22 +108,25 @@ async def screen_bbox(bbox: list[float], *, thresholds: Thresholds,
     results.sort(key=lambda r: (order.get(r["status"], 3), -r["score"]))
     return {
         "count": len(results),
-        "scanned": len(raw),
+        "in_area": in_area,
         "truncated": truncated,
         "max_parcels": limits.max_parcels,
+        "where": where,
         "results": results,
     }
 
 
+def _apn_norm(apn: str | None) -> str:
+    return "".join(ch for ch in (apn or "") if ch.isalnum())
+
+
 async def _enrich_one(client, item, thresholds: Thresholds, slope_grid: int):
-    feat, vacant, listed, listing = item
+    feat = item["feat"]
+    vacant, listed, listing = item["vacant"], item["listed"], item["listing"]
     a = feat["attributes"]
     geom = feat["geometry"]
-    shape = arcgis_to_shapely(geom)
-    if shape is None or shape.is_empty:
-        return None
-
-    lon, lat = centroid_lonlat(shape)
+    shape = item["shape"]
+    lon, lat = item["lon"], item["lat"]
     pbbox = bbox_of(shape)
 
     juris, zoning, flood, slope = await asyncio.gather(
