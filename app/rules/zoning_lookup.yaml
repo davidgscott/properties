@@ -9,13 +9,14 @@
 #   article:      Sonoma County Code Ch.26 article for verification
 #   note:         reasoning / what to confirm
 #
-# IMPORTANT — this is a SCREENING AID, NOT legal advice. Mini/self-storage maps
-# to different codes and permit paths in every jurisdiction, and Municode/eLaws
-# blocked automated fetch during build, so the county entries below encode the
-# well-established Sonoma pattern at MEDIUM confidence and must be confirmed
-# against the live use tables (links per entry) or with Permit Sonoma planning
-# (707-565-1900) before relying on them. Cities are intentionally left unmapped
-# (review) until their use tables are added in Phase 2.
+# IMPORTANT — this is a SCREENING AID, NOT legal advice. The unincorporated
+# Sonoma County entries below are taken from the actual Chapter 26 use tables
+# (exact section + quote in each note), verified against the Chapter 26 text
+# (ORD20-0005). "by-right" means no discretionary Use Permit is required for the
+# USE — Design Review (Article 82), a zoning/building permit, and any combining
+# districts (e.g. floodplain) still apply. Confirm the current adopted code and
+# any site specifics with Permit Sonoma planning (707-565-1900) before relying
+# on these. Incorporated cities are intentionally left unmapped (review).
 # =========================================================================
 
 meta:
@@ -28,32 +29,34 @@ meta:
 jurisdictions:
   # ---- UNINCORPORATED SONOMA COUNTY (Guerneville, Forestville, Monte Rio) ----
   "Unincorporated (Sonoma County)":
-    source: "Sonoma County Zoning Regulations, Chapter 26"
+    source: "Sonoma County Zoning Regulations, Chapter 26 (verified against ORD20-0005 text)"
     zones:
-      C3:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-34", note: "C3 General/Heavy Commercial — mini-storage typically allowed with a Use Permit. Verify §26-34 use-permit list."}
-      MP:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-48", note: "Industrial Park — storage uses commonly allowed with Use Permit. Verify."}
-      M1:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-46", note: "Limited Urban Industrial — §26-46-020 lists uses permitted with a Use Permit; storage generally conditional here."}
-      M2:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-50", note: "Heavy Industrial — storage generally allowed; confirm by-right vs use-permit."}
-      M3:   {permitted: true,  permit_type: conditional, confidence: medium, article: "26-52", note: "Limited Rural Industrial — storage generally conditional. Verify."}
-      AS:   {permitted: null,  permit_type: unknown,     confidence: low,    article: "26-30", note: "Agricultural Services — some storage/service uses; confirm whether mini-storage qualifies."}
-      CR:   {permitted: null,  permit_type: unknown,     confidence: low,    article: "26-38", note: "Commercial Rural — verify; may allow with Use Permit."}
-      LC:   {permitted: false, permit_type: not-allowed, confidence: low,    article: "26-36", note: "Limited Commercial — narrow use list; mini-storage generally NOT a listed use. Verify before excluding."}
-      C1:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-30", note: "Neighborhood Commercial — retail/service focus; storage facilities not permitted."}
-      C2:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-32", note: "Retail Business & Service — storage facilities not a listed use."}
-      CO:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-33", note: "Administrative & Professional Office — no storage."}
-      K:    {permitted: false, permit_type: not-allowed, confidence: low,    article: "26-40", note: "Recreation/Visitor-Serving — not a storage zone."}
+      # ---- Storage PERMITTED (by right) ----
+      C3:   {permitted: true,  permit_type: by-right, confidence: high,   article: "26-34", note: "§26-34-010(v): 'Warehouses including mini-warehouses, moving and storage companies' — permitted by right. Design Review (Art 82) still applies."}
+      MP:   {permitted: true,  permit_type: by-right, confidence: high,   article: "26-44", note: "§26-44-010(f): 'warehousing' permitted by right (mini-warehouse is a warehouse type, cf. C3 §26-34-010(v)). Performance standards + Design Review apply."}
+      M2:   {permitted: true,  permit_type: by-right, confidence: high,   article: "26-48", note: "§26-48-010(f): 'warehousing' permitted by right; (j) covers heavy-commercial storage uses."}
+      M1:   {permitted: true,  permit_type: by-right, confidence: medium, article: "26-46", note: "§26-46-010(d): 'Other heavy commercial uses for which storage ... is necessary and usual' — mini-storage qualifies by right. No explicit 'warehousing' line, so confirm the (d) reading with Permit Sonoma."}
+      M3:   {permitted: true,  permit_type: by-right, confidence: medium, article: "26-50", note: "§26-50-010(d): same heavy-commercial-storage catch-all as M1 — by right; confirm."}
+      # ---- Storage NOT a listed use ----
+      LC:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-36", note: "§26-36-010/020: only accessory storage yards (m); no mini-warehouse use listed. Not allowed."}
+      C1:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-30", note: "§26-30: Neighborhood Commercial — retail only; no storage/warehouse use."}
+      C2:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-32", note: "§26-32: Retail Business & Service — no mini-warehouse use listed."}
+      CO:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-28", note: "§26-28: Administrative & Professional Office — no storage use."}
+      CR:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-38", note: "§26-38: Commercial Rural — no warehouse/mini-storage use listed."}
+      AS:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-40", note: "§26-40: Agricultural Services — only incidental agricultural storage; confirm no ag-service storage angle applies."}
+      K:    {permitted: false, permit_type: not-allowed, confidence: high, article: "26-42", note: "§26-42: Recreation/Visitor-Serving — only incidental boat storage."}
       # Agricultural / resource / residential base zones — not storage zones.
-      AR:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-06", note: "Agriculture & Residential — no commercial storage."}
-      DA:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-08", note: "Diverse Agriculture."}
-      LEA:  {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-10", note: "Land Extensive Agriculture."}
-      LIA:  {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-12", note: "Land Intensive Agriculture."}
-      RRD:  {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-14", note: "Resources & Rural Development."}
-      RR:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-16", note: "Rural Residential."}
-      R1:   {permitted: false, permit_type: not-allowed, confidence: high,   article: "26-18", note: "Low Density Residential."}
-      R2:   {permitted: false, permit_type: not-allowed, confidence: high,   article: "26-20", note: "Medium Density Residential."}
-      R3:   {permitted: false, permit_type: not-allowed, confidence: high,   article: "26-22", note: "High Density Residential."}
-      TP:   {permitted: false, permit_type: not-allowed, confidence: high,   article: "26-15", note: "Timberland Production."}
-      PF:   {permitted: false, permit_type: not-allowed, confidence: medium, article: "26-42", note: "Public Facilities."}
+      AR:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-06", note: "Agriculture & Residential — no commercial storage."}
+      DA:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-08", note: "Diverse Agriculture."}
+      LEA:  {permitted: false, permit_type: not-allowed, confidence: high, article: "26-10", note: "Land Extensive Agriculture."}
+      LIA:  {permitted: false, permit_type: not-allowed, confidence: high, article: "26-12", note: "Land Intensive Agriculture."}
+      RRD:  {permitted: false, permit_type: not-allowed, confidence: high, article: "26-14", note: "Resources & Rural Development."}
+      RR:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-16", note: "Rural Residential."}
+      R1:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-18", note: "Low Density Residential."}
+      R2:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-20", note: "Medium Density Residential."}
+      R3:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-22", note: "High Density Residential."}
+      TP:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-15", note: "Timberland Production."}
+      PF:   {permitted: false, permit_type: not-allowed, confidence: high, article: "26-52", note: "Public Facilities."}
 
   # ---- INCORPORATED CITIES (Phase 2 — add each city's use table here) --------
   # Left unmapped on purpose: every parcel in these jurisdictions returns

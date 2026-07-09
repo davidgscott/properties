@@ -41,8 +41,8 @@ def score_parcel(*, flood: dict, zoning_verdict: dict, slope: dict,
         reasons.append("Zoning permit status unknown — verify manually")
     elif ptype == "conditional":
         reasons.append("Storage allowed only with a Use Permit (conditional)")
-    if permitted and zoning_verdict.get("confidence") == "low":
-        reasons.append("Low-confidence zoning mapping — verify")
+    if permitted and zoning_verdict.get("confidence") in ("low", "medium"):
+        reasons.append("Zoning permits storage but mapping needs confirmation — verify")
 
     # --- Slope ---------------------------------------------------------------
     mean_slope = slope.get("mean_pct")
@@ -61,7 +61,7 @@ def score_parcel(*, flood: dict, zoning_verdict: dict, slope: dict,
     if hard_fail:
         status = "FAIL"
     elif permitted is None or mean_slope is None or ptype == "conditional" \
-            or zoning_verdict.get("confidence") == "low":
+            or zoning_verdict.get("confidence") in ("low", "medium"):
         status = "REVIEW"
     else:
         status = "PASS"

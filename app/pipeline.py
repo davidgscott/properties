@@ -137,6 +137,10 @@ async def _enrich_one(client, item, thresholds: Thresholds, slope_grid: int):
     )
 
     verdict = zoning_lookup(juris, zoning["districts"])
+    zoning_note = verdict["note"]
+    if len(zoning["districts"]) > 1:
+        zoning_note = (f"Parcel spans {', '.join(zoning['districts'])}; verdict "
+                       f"reflects {verdict.get('zone')}. " + zoning_note)
     acres = a.get("LandSizeAcres")
     scored = score_parcel(
         flood=flood, zoning_verdict=verdict, slope=slope,
@@ -148,13 +152,16 @@ async def _enrich_one(client, item, thresholds: Thresholds, slope_grid: int):
         "apn": apn,
         "address": situs_address(a),
         "jurisdiction": juris,
-        "zoning": zoning["dominant"],
+        # Show the zone the verdict is based on (the most storage-favorable zone
+        # the parcel touches); fall back to the dominant-by-area zone.
+        "zoning": verdict.get("zone") or zoning["dominant"],
+        "zoning_dominant": zoning["dominant"],
         "zoning_all": zoning["districts"],
         "zoning_base": zoning.get("dominant_base"),
         "storage_permitted": verdict["permitted"],
         "permit_type": verdict["permit_type"],
         "zoning_confidence": verdict["confidence"],
-        "zoning_note": verdict["note"],
+        "zoning_note": zoning_note,
         "zoning_verify_url": verdict.get("verify_url"),
         "flood_zone": ",".join(flood["zones"]) or "X / none",
         "sfha_pct": flood["sfha_pct"],

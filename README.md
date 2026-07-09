@@ -62,12 +62,25 @@ the expensive calls, and the count is capped for politeness (`config.toml`).
 ### Zoning rule engine (the crux)
 
 `app/rules/zoning_lookup.yaml` maps `(jurisdiction, zone code) → permitted /
-permit-type / confidence`, with a code-article link per entry. Unincorporated
-Sonoma County is seeded (C3, M1–M3, MP as conditional-use candidates) at
-**medium confidence** — the county code use-tables (Municode/eLaws) blocked
-automated fetch, so **verify entries before relying on them**. Incorporated
-cities are intentionally left unmapped (every city parcel → REVIEW) until their
-use tables are added — see *Phase 2* below.
+permit-type / confidence`, with the exact code section + quote and an article
+link per entry. Unincorporated Sonoma County is mapped **directly from the
+Chapter 26 use tables**:
+
+- **By-right (high confidence):** **C3** (§26-34-010(v) — "Warehouses including
+  mini-warehouses, moving and storage companies"), **MP** (§26-44-010(f)) and
+  **M2** (§26-48-010(f)) — "warehousing".
+- **By-right (medium — verify):** **M1** (§26-46-010(d)) and **M3**
+  (§26-50-010(d)) via the "heavy commercial uses for which storage is necessary"
+  catch-all (no explicit warehousing line).
+- **Not allowed:** LC, C1, C2, CO, CR, AS, K and all residential/ag zones (no
+  mini-warehouse use listed).
+
+"By-right" means no discretionary Use Permit for the *use*; Design Review,
+zoning/building permits, and combining districts still apply. High-confidence
+by-right + flat + flood-free scores **PASS**; medium-confidence and multi-zone
+parcels score **REVIEW**. Confirm the current adopted code with Permit Sonoma
+(707-565-1900). Incorporated cities are intentionally unmapped (every city
+parcel → REVIEW) — see *Phase 2*.
 
 ## Layout
 
