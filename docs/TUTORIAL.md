@@ -29,7 +29,10 @@ Under **"1 · Area — radius from Guerneville"**:
 - Drag the **Radius** slider, or type an exact number in **"Exact miles."**
   Start with **15**.
 - The dashed circle on the map updates to match. Everything the tool screens is
-  inside that circle, centered on downtown Guerneville.
+  inside that circle.
+- **Move the center:** the circle starts on downtown Guerneville, but you can
+  **drag the blue pin** anywhere on the map to search around a different spot
+  (the circle follows). Click **↺ Reset center to Guerneville** to snap back.
 
 > Why a circle from Guerneville? That's the target market. Most land in this area
 > is **unincorporated county**, which the tool has full zoning data for. Cities

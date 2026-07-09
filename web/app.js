@@ -4,7 +4,7 @@
 const STATUS_COLOR = { PASS: "#1a7f37", REVIEW: "#c69214", FAIL: "#b42318" };
 const FEMA_NFHL = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer";
 
-let map, parcelLayer, femaLayer, radiusCircle, centerMarker;
+let map, parcelLayer, femaLayer, radiusCircle, centerMarker, searchCenter = null;
 let lastResults = [], selectedApn = null, statusFilter = null;
 let sortCol = null, sortDir = 1;         // table sort state (1 asc, -1 desc)
 let showScreenedOut = false;             // reveal ruled-out (FAIL) parcels
@@ -40,8 +40,17 @@ async function init() {
   cfg = await (await fetch("/api/config")).json();
   const [clon, clat] = cfg.guerneville_center;
   radiusCircle.setLatLng([clat, clon]);
-  centerMarker = L.circleMarker([clat, clon], { radius: 5, color: "#1f6feb",
-    fillColor: "#1f6feb", fillOpacity: 1 }).addTo(map).bindTooltip("Guerneville");
+  searchCenter = [clon, clat];
+  const centerIcon = L.divIcon({ className: "center-pin", iconSize: [18, 18], iconAnchor: [9, 9] });
+  centerMarker = L.marker([clat, clon], { draggable: true, icon: centerIcon,
+    title: "Search center — drag to move" }).addTo(map);
+  centerMarker.on("drag", () => radiusCircle.setLatLng(centerMarker.getLatLng()));
+  centerMarker.on("dragend", () => {
+    const ll = centerMarker.getLatLng();
+    searchCenter = [ll.lng, ll.lat];
+    radiusCircle.setLatLng(ll);
+    updateAreaNote();
+  });
 
   const r = cfg.default_radius_miles ?? 15, maxR = cfg.max_radius_miles ?? 20;
   ["radius-slider", "radius-num"].forEach(id => {
@@ -66,6 +75,7 @@ function wire() {
   document.getElementById("min-acres").addEventListener("input", syncLabels);
   document.getElementById("max-slope").addEventListener("input", syncLabels);
   document.getElementById("screen-btn").addEventListener("click", runScreen);
+  document.getElementById("reset-center").addEventListener("click", resetCenter);
   document.getElementById("add-listing").addEventListener("click", addListing);
   document.getElementById("export-xlsx").addEventListener("click", () => doExport("xlsx"));
   document.getElementById("export-csv").addEventListener("click", () => doExport("csv"));
@@ -103,8 +113,28 @@ function updateRadius() {
   radiusCircle.setRadius(mi * MILES_TO_M);
   map.fitBounds(radiusCircle.getBounds().pad(0.05));
   document.getElementById("radius-val").textContent = mi + " mi";
+  updateAreaNote(mi);
+}
+function isCustomCenter() {
+  if (!searchCenter || !cfg.guerneville_center) return false;
+  const [gl, ga] = cfg.guerneville_center;
+  return Math.abs(searchCenter[0] - gl) > 1e-6 || Math.abs(searchCenter[1] - ga) > 1e-6;
+}
+function updateAreaNote(mi) {
+  mi = mi ?? radiusMiles();
+  const where = isCustomCenter() ? "your chosen point" : "downtown Guerneville";
   document.getElementById("area-note").textContent =
-    `Circle ≈ ${(Math.PI * mi * mi).toFixed(0)} sq mi centered on downtown Guerneville.`;
+    `Circle ≈ ${(Math.PI * mi * mi).toFixed(0)} sq mi centered on ${where}. Drag the blue pin to move it.`;
+  const reset = document.getElementById("reset-center");
+  if (reset) reset.hidden = !isCustomCenter();
+}
+function resetCenter() {
+  searchCenter = [cfg.guerneville_center[0], cfg.guerneville_center[1]];
+  const [lon, lat] = searchCenter;
+  centerMarker.setLatLng([lat, lon]);
+  radiusCircle.setLatLng([lat, lon]);
+  map.panTo([lat, lon]);
+  updateAreaNote();
 }
 function syncLabels() {
   document.getElementById("acres-val").textContent =
@@ -122,7 +152,7 @@ async function runScreen() {
     `(a wide radius can take a minute)`;
   try {
     const body = {
-      center: cfg.guerneville_center,
+      center: searchCenter,
       radius_miles: radiusMiles(),
       min_acres: parseFloat(document.getElementById("min-acres").value),
       max_slope_pct: parseFloat(document.getElementById("max-slope").value),

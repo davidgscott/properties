@@ -29,6 +29,12 @@ select, input[type=text], input:not([type]) { width: 100%; padding: 7px 9px;
   border: 1px solid var(--line); border-radius: 7px; font: inherit; background: #fff; }
 input[type=range] { width: 100%; }
 .val { float: right; font-weight: 600; color: var(--accent); }
+.linklike { border: none; background: none; padding: 4px 0 0; margin: 0; color: var(--accent);
+  font-size: 12px; cursor: pointer; width: auto; }
+.linklike:hover { text-decoration: underline; border: none; }
+.center-pin { width: 18px; height: 18px; border-radius: 50%; background: #1f6feb;
+  border: 3px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,.5); cursor: move;
+  box-sizing: border-box; }
 button { cursor: pointer; border-radius: 7px; font: inherit; padding: 8px 12px;
   border: 1px solid var(--line); background: #fff; }
 button:hover { border-color: #c3c9d1; }
