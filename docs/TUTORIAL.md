@@ -109,6 +109,18 @@ rewards being flood-free, cleanly zoned, flat, larger, and vacant/for-sale.
 - **code** — the exact Sonoma County zoning code section behind the permit call,
   so you (or your planner) can verify it.
 
+### Sorting and filtering
+
+- **Filter by verdict:** the colored counts above the table — **All / PASS /
+  REVIEW / FAIL** — are clickable. Click **PASS** to show only your best leads on
+  both the table and the map; click it again, click **All**, or use **✕ clear**
+  (or the **Filter:** label) to show everything.
+- **Sort any column:** click a column header (APN, Acres, Slope%, Score, etc.) to
+  sort by it; a small ▲/▼ shows the direction, and clicking again reverses it.
+  Handy for "largest parcels first" (Acres) or "flattest first" (Slope%).
+- **Export follows what you see:** if you've filtered to PASS, the Excel/CSV
+  export contains just those rows. Clear the filter first to export everything.
+
 ---
 
 ## Step 5 — Focus on the best leads

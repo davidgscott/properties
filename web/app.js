@@ -6,6 +6,7 @@ const FEMA_NFHL = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/Map
 
 let map, parcelLayer, femaLayer, radiusCircle, centerMarker;
 let lastResults = [], selectedApn = null, statusFilter = null;
+let sortCol = null, sortDir = 1;         // table sort state (1 asc, -1 desc)
 let cfg = { defaults: {}, guerneville_center: [-122.9958, 38.5021], max_radius_miles: 20 };
 const MILES_TO_M = 1609.344;
 
@@ -16,8 +17,12 @@ async function init() {
     maxZoom: 19, attribution: "© OpenStreetMap",
   }).addTo(map);
 
-  // FEMA flood overlay (toggleable).
-  femaLayer = L.esri.dynamicMapLayer({ url: FEMA_NFHL, opacity: 0.4 }).addTo(map);
+  // FEMA flood overlay — show ONLY the high-risk Special Flood Hazard Areas
+  // (layer 28, SFHA_TF='T'), i.e. the zones that actually disqualify a parcel.
+  // Rendering the whole NFHL service made the map look blanketed in flood.
+  femaLayer = L.esri.dynamicMapLayer({
+    url: FEMA_NFHL, opacity: 0.4, layers: [28], layerDefs: { 28: "SFHA_TF = 'T'" },
+  }).addTo(map);
   parcelLayer = L.geoJSON(null, {
     style: styleFor,
     onEachFeature: (f, layer) => layer.on("click", () => selectRow(f.properties.apn)),
@@ -26,7 +31,7 @@ async function init() {
     color: "#1f6feb", weight: 2, fill: false, dashArray: "6 6" }).addTo(map);
 
   L.control.layers(null, {
-    "FEMA flood zones": femaLayer, "Screened parcels": parcelLayer,
+    "FEMA high-risk flood (SFHA)": femaLayer, "Screened parcels": parcelLayer,
     "Search radius": radiusCircle,
   }, { collapsed: false }).addTo(map);
   addLegend();
@@ -149,20 +154,46 @@ function styleFor(f) {
     fillOpacity: sel ? 0.5 : 0.28 };
 }
 
+// Column definitions: label + a sort accessor (columns without one aren't sortable).
+const COLUMNS = [
+  { label: "Status", sort: r => ({ PASS: 0, REVIEW: 1, FAIL: 2 })[r.status] },
+  { label: "Score", sort: r => r.score },
+  { label: "APN", sort: r => r.apn || "" },
+  { label: "Address", sort: r => r.address || "" },
+  { label: "Juris.", sort: r => shortJuris(r.jurisdiction) || "" },
+  { label: "Zoning", sort: r => r.zoning || "" },
+  { label: "Permit", sort: r => permitLabel(r) },
+  { label: "FEMA", sort: r => r.flood_zone || "" },
+  { label: "%SFHA", sort: r => r.sfha_pct ?? 0 },
+  { label: "Slope%", sort: r => r.slope_mean_pct ?? -1 },
+  { label: "Acres", sort: r => r.acres ?? -1 },
+  { label: "Vacant/Use", sort: r => r.vacant_category || "" },
+  { label: "List $", sort: r => priceKey(r) },
+  { label: "Notes" },
+  { label: "Links" },
+];
+
+function priceKey(r) {
+  if (r.list_price) { const n = Number(String(r.list_price).replace(/[^0-9.]/g, "")); if (n) return n; }
+  return r.listed ? 0 : -1;
+}
+
 function renderResults(data) {
-  statusFilter = null;                 // reset the filter on each new screen
+  statusFilter = null; sortCol = null; sortDir = 1;   // reset on each new screen
   drawParcels();
   if (lastResults.length) { try { map.fitBounds(parcelLayer.getBounds().pad(0.1)); } catch (e) {} }
 
-  // Summary — clickable status filters.
+  // Summary — clickable status filters + a clear affordance.
   const by = { PASS: 0, REVIEW: 0, FAIL: 0 };
   lastResults.forEach(r => by[r.status]++);
   document.getElementById("summary").innerHTML =
-    `<span class="filter-label">Filter:</span>` +
+    `<span class="filter-label" title="Show all">Filter:</span>` +
     `<span class="pill all" data-status="" title="Show all">All ${data.count}</span>` +
     `<span class="pill pass" data-status="PASS" title="Show only PASS">PASS ${by.PASS}</span>` +
     `<span class="pill review" data-status="REVIEW" title="Show only REVIEW">REVIEW ${by.REVIEW}</span>` +
-    `<span class="pill fail" data-status="FAIL" title="Show only FAIL">FAIL ${by.FAIL}</span>`;
+    `<span class="pill fail" data-status="FAIL" title="Show only FAIL">FAIL ${by.FAIL}</span>` +
+    `<span class="filter-clear" title="Clear filter">✕ clear</span>`;
+  const clear = () => { statusFilter = null; applyFilter(); };
   document.querySelectorAll("#summary .pill").forEach(p => {
     p.addEventListener("click", () => {
       const s = p.dataset.status || null;
@@ -170,49 +201,90 @@ function renderResults(data) {
       applyFilter();
     });
   });
+  document.querySelector("#summary .filter-label").addEventListener("click", clear);
+  document.querySelector("#summary .filter-clear").addEventListener("click", clear);
 
-  // Table.
-  const cols = ["Status", "Score", "APN", "Address", "Juris.", "Zoning", "Permit",
-    "FEMA", "%SFHA", "Slope%", "Acres", "Vacant/Use", "List $", "Notes", "Links"];
-  document.querySelector("#results-table thead").innerHTML =
-    "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
-  const tb = document.querySelector("#results-table tbody");
-  tb.innerHTML = "";
-  lastResults.forEach(r => {
-    const tr = document.createElement("tr");
-    tr.dataset.apn = r.apn;
-    tr.dataset.status = r.status;
-    const s = r.status.toLowerCase();
-    const permit = permitLabel(r);
-    const price = r.list_price ? r.list_price : (r.listed ? "listed" : "");
-    tr.innerHTML =
-      `<td><span class="tag ${s}">${r.status}</span></td>` +
-      `<td>${r.score}</td>` +
-      `<td class="mono">${r.apn}</td>` +
-      `<td>${esc(r.address)}</td>` +
-      `<td>${esc(shortJuris(r.jurisdiction))}</td>` +
-      `<td>${r.zoning || "—"}</td>` +
-      `<td>${permit}</td>` +
-      `<td>${r.flood_zone}</td>` +
-      `<td>${r.sfha_pct ?? 0}</td>` +
-      `<td>${r.slope_mean_pct ?? "—"}</td>` +
-      `<td>${r.acres ?? "—"}</td>` +
-      `<td>${esc(r.vacant_category || "")}</td>` +
-      `<td>${r.listing_url ? `<a href="${r.listing_url}" target="_blank">${esc(price)}</a>` : esc(price)}</td>` +
-      `<td class="reasons">${esc((r.reasons || []).join("; "))}</td>` +
-      `<td>${linkCell(r)}</td>`;
-    tr.addEventListener("click", () => selectRow(r.apn));
-    tb.appendChild(tr);
-  });
-
-  applyFilter();                       // sets initial "All" active state
+  renderHeader();
+  renderRows();
   document.getElementById("export-xlsx").disabled = !lastResults.length;
   document.getElementById("export-csv").disabled = !lastResults.length;
 }
 
-// Results matching the current status filter (or all).
+// Build the sortable header row.
+function renderHeader() {
+  const cells = COLUMNS.map((c, i) => {
+    const sortable = !!c.sort;
+    const arrow = sortCol === i ? (sortDir === 1 ? " ▲" : " ▼") : "";
+    return `<th${sortable ? ` class="sortable" data-col="${i}"` : ""}>${c.label}${arrow}</th>`;
+  }).join("");
+  const thead = document.querySelector("#results-table thead");
+  thead.innerHTML = "<tr>" + cells + "</tr>";
+  thead.querySelectorAll("th.sortable").forEach(th =>
+    th.addEventListener("click", () => setSort(+th.dataset.col)));
+}
+
+function setSort(i) {
+  if (sortCol === i) { sortDir = -sortDir; }           // same column → toggle direction
+  else {                                               // new column → sensible default
+    sortCol = i;
+    const sample = lastResults.length ? COLUMNS[i].sort(lastResults[0]) : "";
+    sortDir = typeof sample === "number" ? -1 : 1;     // numbers high→low, text A→Z
+  }
+  renderHeader();
+  renderRows();
+}
+
+// Results in the current sort order (falls back to the server's ranking).
+function sortedResults() {
+  if (sortCol == null) return lastResults;
+  const acc = COLUMNS[sortCol].sort;
+  return [...lastResults].sort((a, b) => {
+    const va = acc(a), vb = acc(b);
+    if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
+    return String(va).localeCompare(String(vb)) * sortDir;
+  });
+}
+
+// Results shown in the table/export: current sort order, then the status filter.
 function visibleResults() {
-  return statusFilter ? lastResults.filter(r => r.status === statusFilter) : lastResults;
+  const base = sortedResults();
+  return statusFilter ? base.filter(r => r.status === statusFilter) : base;
+}
+
+function rowHTML(r) {
+  const s = r.status.toLowerCase();
+  const price = r.list_price ? r.list_price : (r.listed ? "listed" : "");
+  return `<td><span class="tag ${s}">${r.status}</span></td>` +
+    `<td>${r.score}</td>` +
+    `<td class="mono">${r.apn}</td>` +
+    `<td>${esc(r.address)}</td>` +
+    `<td>${esc(shortJuris(r.jurisdiction))}</td>` +
+    `<td>${r.zoning || "—"}</td>` +
+    `<td>${permitLabel(r)}</td>` +
+    `<td>${r.flood_zone}</td>` +
+    `<td>${r.sfha_pct ?? 0}</td>` +
+    `<td>${r.slope_mean_pct ?? "—"}</td>` +
+    `<td>${r.acres ?? "—"}</td>` +
+    `<td>${esc(r.vacant_category || "")}</td>` +
+    `<td>${r.listing_url ? `<a href="${r.listing_url}" target="_blank">${esc(price)}</a>` : esc(price)}</td>` +
+    `<td class="reasons">${esc((r.reasons || []).join("; "))}</td>` +
+    `<td>${linkCell(r)}</td>`;
+}
+
+// (Re)build the table body in the current sort order, then apply the filter.
+function renderRows() {
+  const tb = document.querySelector("#results-table tbody");
+  tb.innerHTML = "";
+  sortedResults().forEach(r => {
+    const tr = document.createElement("tr");
+    tr.dataset.apn = r.apn;
+    tr.dataset.status = r.status;
+    if (r.apn === selectedApn) tr.classList.add("sel");
+    tr.innerHTML = rowHTML(r);
+    tr.addEventListener("click", () => selectRow(r.apn));
+    tb.appendChild(tr);
+  });
+  applyFilter();
 }
 
 // (Re)draw the parcels currently passing the filter onto the map.

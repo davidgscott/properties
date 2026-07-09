@@ -93,14 +93,34 @@ broader clause, so they stay REVIEW until confirmed.
 
 ---
 
-## How is "in a flood zone" decided?
+## Does FEMA have different flood-risk levels, and which ones fail a parcel?
 
-The tool takes the parcel's shape and asks FEMA's flood layer which flood zones
-it overlaps, then calculates **what percentage of the parcel** sits in a Special
-Flood Hazard Area (zones A, AE, AO, AH, V, VE, etc.). With **strict flood** on
-(the default), *any* overlap fails the parcel — appropriate for Guerneville,
+Yes. FEMA maps two broad levels:
+
+- **High-risk — the Special Flood Hazard Area (SFHA):** the 1%-annual-chance
+  ("100-year") floodplain — zones **A, AE, AH, AO, V, VE**. These are the
+  regulatory high-risk zones.
+- **Moderate/low-risk:** **Zone X (shaded)** = the 0.2%-annual-chance
+  ("500-year") area, and **Zone X (unshaded)** = minimal risk.
+
+**The tool only fails a parcel that overlaps a high-risk SFHA zone.** Moderate
+(500-year) and minimal-risk areas do **not** fail it — that's why good parcels
+show `FEMA = X`. So parcels aren't "all failing because of flood"; most fails are
+zoning or slope.
+
+## How is "in a flood zone" decided, and why did the map look all-flooded?
+
+The tool takes the parcel's shape, asks FEMA which zones it overlaps, and
+calculates **what percentage sits in a high-risk SFHA**. With **strict flood** on
+(the default), *any* SFHA overlap fails the parcel — appropriate for Guerneville,
 where the Russian River floods regularly. It also flags the **floodway** (the
-most dangerous part). `X` in the FEMA column means outside the mapped risk area.
+most dangerous part). Turn strict flood **off** to see flood-touched parcels
+marked but not auto-failed.
+
+The **map overlay** is set to show **only the high-risk SFHA zones** — the ones
+that actually disqualify a parcel. (Earlier it drew FEMA's entire flood layer,
+which made the whole region look flooded even though the scoring was already
+selective.)
 
 ## How is slope calculated?
 
