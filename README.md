@@ -47,6 +47,10 @@ python run.py                 # opens http://127.0.0.1:8000
 
 No API keys are required — all four data domains use free public services.
 
+**Updating to the latest version:** double-click **`update.bat`** (Windows) or
+**`update.command`** (Mac). It downloads the newest files and swaps them in,
+keeping your setup and saved listings; then run `start` again.
+
 1. Set the **radius** from downtown Guerneville (number box or slider, default
    15 mi) — the dashed circle on the map shows the search area.
 2. Set **min acreage** and **max slope**; toggle *vacant-only*,

@@ -121,6 +121,15 @@ The [Tutorial](TUTORIAL.md) explains what every column and color means.
 
 ---
 
+## Updating to a newer version
+
+When there's an update, just double-click **`update.command`** (Mac) or
+**`update.bat`** (Windows). It downloads the latest files and swaps them in —
+your saved listings and one-time setup are kept — then run **start** again and
+hard-refresh the browser (`Ctrl/Cmd + Shift + R`). No re-downloading by hand.
+
+---
+
 ## Stopping and restarting
 
 - **To stop the tool:** close the little black launcher window (or click it and
